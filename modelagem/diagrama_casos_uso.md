@@ -1,5 +1,6 @@
 # Diagrama de Casos de Uso
 
+```plantuml
 @startuml
 
 left to right direction
@@ -26,3 +27,4 @@ ong --> UC6
 ong --> UC7
 
 @enduml
+```
