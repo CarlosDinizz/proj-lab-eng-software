@@ -22,6 +22,8 @@ cid --> UC1
 cid --> UC2
 cid --> UC3
 cid --> UC4
+cid --> UC6
+ong --> UC2
 ong --> UC5
 ong --> UC6
 ong --> UC7
