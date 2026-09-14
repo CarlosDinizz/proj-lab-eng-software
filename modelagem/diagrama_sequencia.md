@@ -55,17 +55,21 @@ skinparam Shadowing false
 actor Cidadao 
 
 Cidadao -> SupetsView: Entra no página visualização de campanhas
-SupetsView -> CampanhaController: getFormularioCampanha()
-CampanhaController --> SupetsView: formulario
-SupetsView -> CampanhaController: cadastrarCampanha(dados)
-
-alt não existe
-CampanhaController -> CampanhaModel: criarOcorrencia(dados)
+SupetsView -> CampanhaController: mostrarCampanhas()
+CampanhaController -> CampanhaModel: getAll()
+CampanhaModel --> CampanhaController: campanhas
+CampanhaController --> SupetsView: mostraCampanhas(campanhas)
+SupetsView -> CampanhaController: SelecionaCampanha(campanha)
+CampanhaController --> SupetsView: MostraDetalhes(campanha)
+SupetsView -> CampanhaController: CadastrarEmCampanha(campanha)
+alt não esta cadastrado
+CampanhaController -> CampanhaModel: CadastrarCidadao()
 CampanhaController --> SupetsView: status(ok)
 else
-CampanhaController -> CampanhaModel: criarOcorrencia(dados)
 CampanhaController --> SupetsView: status(nok)
 end
+
 @enduml
+
 ```
 
