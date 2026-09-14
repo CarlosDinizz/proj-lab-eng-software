@@ -23,7 +23,7 @@ end
 @enduml
 
 ```
-## Participar campanha
+## Registrar campanha
 
 ```plantuml
 @startuml
@@ -37,14 +37,35 @@ CampanhaController --> SupetsView: formulario
 SupetsView -> CampanhaController: cadastrarCampanha(dados)
 
 alt não existe
-CampanhaController -> OcorrenciaModel: criarOcorrencia(dados)
+CampanhaController -> CampanhaModel: criarOcorrencia(dados)
 CampanhaController --> SupetsView: status(ok)
 else
-CampanhaController -> OcorrenciaModel: criarOcorrencia(dados)
+CampanhaController -> CampanhaModel: criarOcorrencia(dados)
 CampanhaController --> SupetsView: status(nok)
 end
 @enduml
 ```
 
-## Registrar campanha
+## Participar de campanha
+
+```plantuml
+@startuml
+skinparam Shadowing false
+
+actor Cidadao 
+
+Cidadao -> SupetsView: Entra no página visualização de campanhas
+SupetsView -> CampanhaController: getFormularioCampanha()
+CampanhaController --> SupetsView: formulario
+SupetsView -> CampanhaController: cadastrarCampanha(dados)
+
+alt não existe
+CampanhaController -> CampanhaModel: criarOcorrencia(dados)
+CampanhaController --> SupetsView: status(ok)
+else
+CampanhaController -> CampanhaModel: criarOcorrencia(dados)
+CampanhaController --> SupetsView: status(nok)
+end
+@enduml
+```
 
