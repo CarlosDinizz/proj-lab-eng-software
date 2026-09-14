@@ -1,3 +1,4 @@
+```plantuml
 @startuml
 
 (*) --> "
@@ -78,10 +79,6 @@ preenchida -down-> "
 
 sucesso --> inicio
 
-
-
-
-
-
-
 @enduml
+
+```
