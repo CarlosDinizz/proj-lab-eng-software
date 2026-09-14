@@ -23,5 +23,27 @@ end
 @enduml
 
 ```
-
 ## Registrar campanha
+
+```plantuml
+@startuml
+skinparam Shadowing false
+
+actor ONG 
+
+Cidadao -> SupetsView: Entra no página de campanhas
+SupetsView -> CampanhaController: getFormularioCampanha()
+CampanhaController --> SupetsView: formulario
+SupetsView -> CampanhaController: cadastrarCampanha(dados)
+
+alt não existe
+CampanhaController -> OcorrenciaModel: criarOcorrencia(dados)
+CampanhaController --> SupetsView: status(ok)
+else
+CampanhaController -> OcorrenciaModel: criarOcorrencia(dados)
+CampanhaController --> SupetsView: status(nok)
+end
+@enduml
+
+
+```
