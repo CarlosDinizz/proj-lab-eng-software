@@ -23,7 +23,7 @@ end
 @enduml
 
 ```
-## Registrar campanha
+## Participar campanha
 
 ```plantuml
 @startuml
@@ -31,7 +31,7 @@ skinparam Shadowing false
 
 actor ONG 
 
-Cidadao -> SupetsView: Entra no página de campanhas
+ONG -> SupetsView: Entra no página criação de campanhas
 SupetsView -> CampanhaController: getFormularioCampanha()
 CampanhaController --> SupetsView: formulario
 SupetsView -> CampanhaController: cadastrarCampanha(dados)
@@ -44,6 +44,7 @@ CampanhaController -> OcorrenciaModel: criarOcorrencia(dados)
 CampanhaController --> SupetsView: status(nok)
 end
 @enduml
-
-
 ```
+
+## Registrar campanha
+
