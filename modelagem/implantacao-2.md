@@ -77,7 +77,7 @@ node "ServidorAWS" as aws {
     
     node "cidadao_db:EC2" as cidadao_db {
         node "cidadao_db(docker)" {
-            database Ong
+            database Cidadao
         }
     }
     
@@ -88,5 +88,4 @@ node "ServidorAWS" as aws {
 }
 
 @enduml
-
 ```
