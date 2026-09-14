@@ -1,6 +1,7 @@
 # Diagrama de Classes de Domínio
 
 ```plantuml
+@startuml
 class Campanha {
 }
 
@@ -10,6 +11,9 @@ class TipoCampanha {
 class StatusCampanha {
 }
 
+class ParticipacaoCampanha {
+}
+
 class ONG {
 }
 
@@ -17,6 +21,12 @@ class Cidadao {
 }
 
 class Local {
+}
+
+class Estado {
+}
+
+class Cidade {
 }
 
 class Contato {
@@ -31,35 +41,67 @@ class StatusOcorrencia {
 class TipoOcorrencia {
 }
 
+class Animal {
+}
 
-Cidadao --> Ocorrencia : registra
+class SexoAnimal {
+}
 
-Cidadao --> Contato : possui
+class Especie {}
 
-Cidadao --> Local : mora
+class Porte {}
 
-ONG --> Local : possui
 
-ONG --> Contato : possui
 
-ONG --> Campanha : cria
 
-Campanha --> TipoCampanha : possui
+Cidadao "*" --> "*" Ocorrencia : registra
 
-Campanha --> StatusCampanha : contém
+Cidadao "1" --> "*" Contato : possui
 
-Ocorrencia --> TipoOcorrencia : possui
+Cidadao "*" --> "1" Local : mora
 
-Ocorrencia --> StatusOcorrencia : possui
+ONG "*" --> "1" Local : possui
 
-Campanha --> Notificacao : registra
+ONG "1" --> "*" Contato : possui
 
-Ocorrencia --> Notificacao :  registra 
+ONG "1" --> "*" Campanha : cria
 
-Contato --> TipoContato : contém
+Campanha "*" --> "1" TipoCampanha : possui
 
-Campanha --> Local : possui
+Campanha "*" --> "1" StatusCampanha : contém
 
-Ocorrencia --> Local : possui
+Ocorrencia "*" --> "1" TipoOcorrencia : possui
+
+Ocorrencia "*" --> "1" StatusOcorrencia : possui
+
+Campanha "1" --> "*" Notificacao : dispara
+
+Ocorrencia "1" --> "*" Notificacao :  dispara 
+
+Contato "*" --> "1" TipoContato : contém
+
+Campanha "*" --> "1" Local : ocorre em
+
+Ocorrencia "*" --> "1" Local : ocorre em
+
+Local "*" --> "1" Estado : possui
+
+Cidade "*" --> "1" Estado : pertence
+
+Ocorrencia "1" --> "1" Animal : envolve
+
+Animal "*" --> "1" Especie : possui
+
+Animal "*" --> "1" Porte : possui
+
+Animal "*" --> "1" SexoAnimal : possui
+
+Cidadao "1" --> "*" ParticipacaoCampanha : realiza
+
+Campanha "1" --> "*" ParticipacaoCampanha : possui
+
+
+@enduml
+
 
 ```
