@@ -1,0 +1,13 @@
+[Unit]
+Description=SuPets
+After=network.target
+
+[Service]
+User=jenkins
+WorkingDirectory=/opt/supets
+ExecStart=/usr/bin/java -jar /opt/supets/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
