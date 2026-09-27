@@ -20,7 +20,7 @@ class ValidadorCadastroTest {
     @Test
     @DisplayName("e-mail: aceita formato válido e rejeita inválido, nulo ou em branco")
     void validaEmail() {
-        assertFalse(validador.isEmailValido("aluno@mackenzie.br"));
+        assertTrue(validador.isEmailValido("aluno@mackenzie.br"));
         assertTrue(validador.isEmailValido("nome.sobrenome+tag@exemplo.com.br"));
         assertFalse(validador.isEmailValido("aluno@"));
         assertFalse(validador.isEmailValido("aluno@mackenzie"));
