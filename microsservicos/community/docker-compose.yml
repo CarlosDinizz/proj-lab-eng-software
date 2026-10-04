@@ -1,0 +1,28 @@
+services:
+    # Container do banco
+    community_db:
+        container_name: community_db
+        image: postgres:16-alpine3.23
+        restart: always
+        environment:
+            POSTGRES_PASSWORD: ${PG_PASSWORD:-root}
+            POSTGRES_USER: ${PG_USER:-root}
+            POSTGRES_DB: community
+        ports:
+            - "5432:5432"
+        volumes:
+            - data:/var/lib/postgresql/data
+        networks:
+            - supets_network
+
+volumes:
+    data:
+
+# Rede que o container utiliza
+networks:
+    supets_network:
+        driver: bridge
+
+
+
+
