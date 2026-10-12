@@ -32,7 +32,7 @@ public class ONG {
     private String cnpj;
 
     @OneToMany
-    @JoinColumn(name = "cidadao_id")
+    @JoinColumn(name = "ong_")
     private List<Contato> contatos = new ArrayList<>();
 
     @OneToOne
