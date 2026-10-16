@@ -1,9 +1,11 @@
 package com.supets.community.shared.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record LocalDto(
-    String endereco,
+    @NotBlank String endereco,
     Integer numero,
-    String complememto,
+    String complemento,
     CidadeDto cidade,
     EstadoDto estado
 ) {

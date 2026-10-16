@@ -1,7 +1,9 @@
 package com.supets.community.shared.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record ContatoDto(
-    String valor,
-    String tipo
+    @NotBlank String valor,
+    @NotBlank String tipo
 ) {
 }

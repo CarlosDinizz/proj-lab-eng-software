@@ -1,7 +1,9 @@
 package com.supets.community.shared.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record EstadoDto(
-    String nome,
-    String uf
+    @NotBlank String nome,
+    @NotBlank String uf
 ) {
 }

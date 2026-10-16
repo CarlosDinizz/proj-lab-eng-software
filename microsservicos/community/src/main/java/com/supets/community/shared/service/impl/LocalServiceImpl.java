@@ -32,7 +32,7 @@ public class LocalServiceImpl implements LocalService {
     public Local saveLocal(LocalDto request) {
         Local local = new Local();
         local.setEndereco(request.endereco());
-        local.setComplemento(request.complememto());
+        local.setComplemento(request.complemento());
         local.setNumero(request.numero());
 
         Estado estado = estadoService.getEstado(request.estado().uf());
