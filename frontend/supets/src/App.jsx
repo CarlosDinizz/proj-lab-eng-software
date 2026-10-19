@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import './App.css'
+import { Button, HStack, Text } from '@chakra-ui/react'
 
 function App() {
 
   return (
-    <h1 className="text-3xl font-bold underline text-red-500">
-      Hello world!
-    </h1>
+    <>
+        <Button colorPalette={"cyan"} variant={"outline"}>
+            TESTE
+        </Button>
+    </>
+
   )
 }
 
