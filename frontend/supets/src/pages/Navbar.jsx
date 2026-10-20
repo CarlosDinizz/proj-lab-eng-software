@@ -18,11 +18,11 @@ export function Navbar() {
                             </Tabs.Trigger>
 
                             <Tabs.Trigger value="sobre" color={"white"}>
-                                Settings
+                                Sobre
                             </Tabs.Trigger>
                         </Tabs.List>
 
-                </Tabs.Root>
+                    </Tabs.Root>
 
                     <Button variant={"outline"} color={"white"} _hover={{ color: 'black' }}>
                         Login
