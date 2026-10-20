@@ -2,12 +2,13 @@ import { useState } from 'react'
 import './App.css'
 import { Button, HStack, Tabs, Text } from '@chakra-ui/react'
 import { LuFolder, LuSquareCheck, LuUser } from 'react-icons/lu'
+import { Navbar } from './pages/Navbar'
 
 function App() {
 
   return (
     <>
-        <Tabs.Root defaultValue="members">
+        {/* <Tabs.Root defaultValue="members">
             <Tabs.List>
                 <Tabs.Trigger value="members">
                     <LuUser />
@@ -34,7 +35,8 @@ function App() {
         </Tabs.Root>
         <Button colorPalette={"cyan"} variant={"outline"}>
             TESTE
-        </Button>
+        </Button> */}
+        <Navbar />
     </>
 
   )
