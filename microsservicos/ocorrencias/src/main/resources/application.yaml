@@ -1,0 +1,11 @@
+server:
+    port: 8080
+
+spring:
+    application:
+        name: ocorerncias
+
+    datasource:
+        url: jdbc:postgresql://${PG_HOST:localhost}:5432/ocorrencias
+        username: ${PG_USER:root}
+        password: ${PG_PASSWORD:root}
