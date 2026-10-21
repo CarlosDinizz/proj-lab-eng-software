@@ -6,6 +6,6 @@ spring:
         name: community
 
     datasource:
-        url: jdbc:postgresql://${PG_HOST:localhost}:5432/community
+        url: jdbc:postgresql://${PG_HOST:localhost}:5431/community
         username: ${PG_USER:root}
         password: ${PG_PASSWORD:root}
