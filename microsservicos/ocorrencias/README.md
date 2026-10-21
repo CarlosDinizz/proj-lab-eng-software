@@ -1,4 +1,4 @@
-# Serviço Community
+# Serviço Ocorrencias
 
 # Sumário
 
@@ -9,11 +9,10 @@
 - [Como executar?](#como-executar)
 
 ## Arquitetura
-O serviço Community segue a arquitetura de monolito modular.
+O serviço ocorrencias segue a arquitetura de monolito modular.
 
 Isto quer dizer que este serviço é dividido por módulos:
-- ONG
-- Cidadão
+- Ocorrencia
 
 ```
 ├───src
@@ -21,20 +20,13 @@ Isto quer dizer que este serviço é dividido por módulos:
 │   │   ├───java
 │   │   │   └───com
 │   │   │       └───supets
-│   │   │           └───community
-│   │   │               ├───cidadao
-│   │   │               │   ├───controller
-│   │   │               │   ├───model
-│   │   │               │   ├───repository
-│   │   │               │   └───service
-│   │   │               │       └───impl
-│   │   │               ├───ong
-│   │   │               │   ├───controller
-│   │   │               │   ├───model
-│   │   │               │   ├───repository
-│   │   │               │   └───service
-│   │   │               │       └───impl
-│   │   │               └───shared
+│   │   │           └───ocorrencias
+│   │   │               └──ocorrencia
+│   │   │                  ├───controller
+│   │   │                  ├───model
+│   │   │                  ├───repository
+│   │   │                  └───service
+│   │   │                      └───impl
 │   │   └───resources
 │   │       ├───db
 │   │       │   └───migration
@@ -44,24 +36,18 @@ Isto quer dizer que este serviço é dividido por módulos:
 │       └───java
 │           └───com
 │               └───supets
-│                   └───community
+│                   └───ocorrencias
 └───target
 ├───classes
 │   └───com
 │       └───supets
-│           └───community
-│               ├───cidadao
+│           └───ocorrencias
+│               ├───ocorrencia
 │               │   ├───controller
 │               │   ├───model
 │               │   ├───repository
 │               │   └───service
 │               │       └───impl
-│               └───ong
-│                   ├───controller
-│                   ├───model
-│                   ├───repository
-│                   └───service
-│                       └───impl
 ```
 
 ## Migrations
@@ -83,7 +69,7 @@ Substitua `URL_SERVICO` por localhost se não estiver executando o serviço pelo
 - PostgreSQL 16.3
 
 ## Como executar?
-Primeiramente é necessário que o banco ``community_db`` esteja em execução.
+Primeiramente é necessário que o banco ``ocorrencias_db`` esteja em execução.
 
 Veja executando:
 ```bash
