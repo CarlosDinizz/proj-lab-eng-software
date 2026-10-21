@@ -25,12 +25,12 @@ public class Ocorrencia{
     private double lat;
 
     @Column(name = "lon", nullable = false)
-    private double lat;
+    private double lon;
 
     @Column(name = "cidadao_id", nullable = false)
     private Integer cidadao_id;
 
     @ManyToOne
     @JoinColumn(name = "tipo_ocorrencia_id")
-    private TipoContato tipoContato;
+    private TipoOcorrencia tipoOcorrencia;
 }

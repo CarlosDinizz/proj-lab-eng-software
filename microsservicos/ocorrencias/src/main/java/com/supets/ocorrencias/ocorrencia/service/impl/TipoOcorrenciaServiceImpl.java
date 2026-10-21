@@ -3,7 +3,7 @@ package com.supets.ocorrencias.ocorrencia.service.impl;
 import com.supets.ocorrencias.ocorrencia.dto.OcorrenciaDto;
 import com.supets.ocorrencias.ocorrencia.exceptions.TipoOcorrenciaNotFoundException;
 import com.supets.ocorrencias.ocorrencia.model.TipoOcorrencia;
-import com.supets.ocorrencias.ocorrencia.TipoOcorrenciaRepository;
+import com.supets.ocorrencias.ocorrencia.repository.TipoOcorrenciaRepository;
 import com.supets.ocorrencias.ocorrencia.service.TipoOcorrenciaService;
 import org.springframework.stereotype.Service;
 

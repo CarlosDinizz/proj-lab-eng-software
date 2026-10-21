@@ -1,7 +1,7 @@
-package com.supets.community.cidadao.service.impl;
+package com.supets.ocorrencias.ocorrencia.service.impl;
 
 
-import com.supets.community.cidadao.service.CidadaoService;
+import com.supets.ocorrencias.ocorrencia.service.OcorrenciaService;
 import org.springframework.stereotype.Service;
 
 @Service

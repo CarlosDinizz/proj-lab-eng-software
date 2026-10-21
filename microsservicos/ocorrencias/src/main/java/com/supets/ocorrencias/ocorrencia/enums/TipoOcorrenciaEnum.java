@@ -1,4 +1,4 @@
-package com.supets.community.shared.enums;
+package com.supets.ocorrencias.ocorrencia.enums;
 
 public enum TipoOcorrenciaEnum{
     ABANDONADO(1, "Animal Abandonado"),
