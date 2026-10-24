@@ -3,6 +3,7 @@ import './App.css'
 import { Button, HStack, Tabs, Text } from '@chakra-ui/react'
 import { LuFolder, LuSquareCheck, LuUser } from 'react-icons/lu'
 import { Navbar } from './pages/Navbar'
+import { Footer } from './pages/Footer'
 
 function App() {
 
@@ -37,6 +38,7 @@ function App() {
             TESTE
         </Button> */}
         <Navbar />
+        <Footer />
     </>
 
   )

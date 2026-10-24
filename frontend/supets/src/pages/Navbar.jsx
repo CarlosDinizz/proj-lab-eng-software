@@ -3,7 +3,7 @@ import { Box, Button, Flex, Tabs, Text } from "@chakra-ui/react";
 export function Navbar() {
     return (
         <>
-            <Box bg={"cyan.800"} width={"100%"} height={"5rem"} padding={"20px"}>
+            <Box bg={"purple.700"} width={"100%"} height={"5rem"} padding={"20px"}>
                 <Flex gap={"1rem"} color={"white"} justifyContent={"end"} textAlign={"center"} alignItems={"center"} alignContent={"center"} height={"100%"}>
 
 
