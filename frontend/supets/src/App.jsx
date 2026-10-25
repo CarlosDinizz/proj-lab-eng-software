@@ -1,44 +1,21 @@
-import { useState } from 'react'
 import './App.css'
-import { Button, HStack, Tabs, Text } from '@chakra-ui/react'
-import { LuFolder, LuSquareCheck, LuUser } from 'react-icons/lu'
-import { Navbar } from './pages/Navbar'
-import { Footer } from './pages/Footer'
+import { Box, Flex } from '@chakra-ui/react'
+import { Navbar } from './components/layout/navbar/Navbar'
+import { Footer } from './components/layout/footer/Footer'
 
 function App() {
 
   return (
     <>
-        {/* <Tabs.Root defaultValue="members">
-            <Tabs.List>
-                <Tabs.Trigger value="members">
-                    <LuUser />
-                    Members
-                </Tabs.Trigger>
+        <Flex direction="column" minHeight="100vh">
+            <Navbar />
 
-                <Tabs.Trigger value="projects">
-                    <LuFolder />
-                    Projects
-                </Tabs.Trigger>
+            <Box as="main" flex="1">
 
-                <Tabs.Trigger value="tasks">
-                    <LuSquareCheck />
-                    Settings
-                </Tabs.Trigger>
-            </Tabs.List>
+            </Box>
 
-            <Tabs.Content value="members">Manage your team members</Tabs.Content>
-            <Tabs.Content value="projects">Manage your projects</Tabs.Content>
-            <Tabs.Content value="tasks">
-                Manage your tasks for freelancers
-            </Tabs.Content>
-
-        </Tabs.Root>
-        <Button colorPalette={"cyan"} variant={"outline"}>
-            TESTE
-        </Button> */}
-        <Navbar />
-        <Footer />
+            <Footer />
+        </Flex>
     </>
 
   )
