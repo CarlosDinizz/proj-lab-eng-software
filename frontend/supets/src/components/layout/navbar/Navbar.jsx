@@ -1,8 +1,19 @@
 import { Box, Button, Flex, Tabs } from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
 
 export function Navbar() {
 
+    const navigate = useNavigate();
+
     const tabs = getTabs();
+
+    function moveToLogin() {
+        navigate("/login");
+    }
+
+    function moveToCadastro() {
+        navigate("/cadastro");
+    }
 
     return (
         <>
@@ -32,11 +43,11 @@ export function Navbar() {
                         </Tabs.List>
                     </Tabs.Root>
 
-                    <Button variant={"outline"} color={"white"} _hover={{ color: 'black' }}>
+                    <Button variant={"outline"} color={"white"} _hover={{ color: 'black' }} onClick={() => moveToLogin()}>
                         Login
                     </Button>
 
-                    <Button variant={"outline"} color={"white"} _hover={{ color: 'black' }}>
+                    <Button variant={"outline"} color={"white"} _hover={{ color: 'black' }} onClick={() => moveToCadastro()}>
                         Cadastre-se
                     </Button>
                 </Flex>

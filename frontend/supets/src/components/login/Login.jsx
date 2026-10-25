@@ -1,4 +1,4 @@
-import { Box, Button, Card, Field, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Card, Field, Input, Stack } from "@chakra-ui/react";
 
 export function Login() {
     return (
