@@ -4,6 +4,7 @@ import { Navbar } from './components/layout/navbar/Navbar'
 import { Footer } from './components/layout/footer/Footer'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Login } from './components/login/Login'
+import { Cadastro } from './components/cadastro/Cadastro'
 import { Home } from './pages/home/Home'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
                 <Box as="main" flex="1">
                     <Routes>
                         <Route path="/login" element={<Login />}/>
+                        <Route path="/cadastro" element={<Cadastro />} />
                         <Route path="/" element={<Home />}/>
                         <Route path="*" element={<Home />}/>
                     </Routes>
