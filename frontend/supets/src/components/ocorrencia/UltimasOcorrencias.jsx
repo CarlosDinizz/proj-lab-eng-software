@@ -4,7 +4,7 @@ export function UltimasOcorrencias() {
     const ocorrencias = getOcorrencias();
 
     return (
-        <Flex flexDir="column" gap="2" p="8">
+        <Flex flexDir="column" gap="2">
             <Text fontWeight="bold" fontSize="3xl">Últimas Ocorrências</Text>
             <Flex gap="4" align="stretch">
                 {ocorrencias.map((ocorrencia) =>
