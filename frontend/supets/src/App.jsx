@@ -6,6 +6,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Login } from './components/login/Login'
 import { Cadastro } from './components/cadastro/Cadastro'
 import { Home } from './pages/home/Home'
+import { Toaster, toaster } from "@/components/ui/toaster"
 
 function App() {
   return (
@@ -13,7 +14,6 @@ function App() {
         <BrowserRouter>
             <Flex direction="column" minHeight="100vh">
                 <Navbar />
-
                 <Box as="main" flex="1">
                     <Routes>
                         <Route path="/login" element={<Login />}/>
@@ -22,7 +22,7 @@ function App() {
                         <Route path="*" element={<Home />}/>
                     </Routes>
                 </Box>
-
+                <Toaster />
                 <Footer />
             </Flex>
         </BrowserRouter>

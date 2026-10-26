@@ -1,4 +1,5 @@
 import { Box, Button, Card, Field, Input, Stack, Tabs } from "@chakra-ui/react";
+import { Toaster, toaster } from "@/components/ui/toaster"
 import { CadastroCidadao } from "./CadastroCidadao";
 import { CadastroOng } from "./CadastroOng";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,11 @@ export function Cadastro() {
         if (path) navigate(path);
     }
 
+    function cadastrar() {
+        toastSucesso();
+        handleNavigate("/");
+    }
+
     return (
         <Box
             display="flex"
@@ -19,7 +25,7 @@ export function Cadastro() {
             px="4"
             height="900px"
             minHeight="900px"
-        >
+            >
             <Card.Root
                 maxWidth="xl"
                 width="full"
@@ -42,6 +48,12 @@ export function Cadastro() {
                     <Card.Body>
                         <Tabs.Content 
                             value="cidadao"
+                            _open={{
+                                animationName: "fade-in, scale-in",
+                            }}
+                            _closed={{
+                                animationName: "fade-out, scale-out",
+                            }}
                         >
                             <CadastroCidadao />
                         </Tabs.Content>
@@ -61,11 +73,20 @@ export function Cadastro() {
                     </Card.Body>
                     <Card.Footer colorPalette="orange" justifyContent="flex-end">
                         <Button
-                            onClick={() => handleNavigate("/")}
+                            onClick={() => {
+                                cadastrar()
+                            }}
                         >Cadastrar</Button>
                     </Card.Footer>
                 </Tabs.Root>
             </Card.Root>
         </Box>
     );
+}
+
+function toastSucesso() {
+    toaster.create({
+        title: "Cadastro realizado com sucesso!",
+        type: "success"
+    });
 }
