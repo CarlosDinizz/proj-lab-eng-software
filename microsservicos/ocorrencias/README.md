@@ -58,7 +58,7 @@ Para mais informações, clique [aqui](https://www.baeldung.com/database-migrati
 A documentação dos endpoints dessa API podem ser acessadas através do Swagger.
 
 Abra seu navegador e digite:
-<http://URL_SERVICO:8080/swagger-ui/index.html>
+<http://URL_SERVICO:8082/swagger-ui/index.html>
 
 Substitua `URL_SERVICO` por localhost se não estiver executando o serviço pelo container.
 
