@@ -1,7 +1,7 @@
 # Gateway de API
 
-A aplicação principal também funciona como gateway na porta 8081. Ela encaminha
-as requisições sem alterar o caminho:
+O gateway fica em `microsservicos/gateway/` e atende na porta 8081.
+Encaminha as requisições sem alterar o caminho:
 
 | Caminho | Serviço | Endereço padrão |
 | --- | --- | --- |
@@ -9,8 +9,8 @@ as requisições sem alterar o caminho:
 | `/ocorrencia/api/v1/**` | Ocorrências | `http://localhost:8082` |
 
 Os caminhos base `/cidadao/api/v1`, `/ong/api/v1` e `/ocorrencia/api/v1`
-também são encaminhados. O endpoint `/api/status` continua disponível na
-aplicação principal. Por exemplo:
+também são encaminhados. O endpoint `/api/status` continua disponível no
+gateway. Por exemplo:
 
 ```sh
 curl http://localhost:8081/cidadao/api/v1/1

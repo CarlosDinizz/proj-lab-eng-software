@@ -23,26 +23,32 @@ pipeline {
         // Falha aqui é erro de compilação.
         stage('Build') {
             steps {
-                sh './mvnw -B clean compile'
+                dir('microsservicos/gateway') {
+                    sh './mvnw -B clean compile'
+                }
             }
         }
 
         // Um teste falhando para a pipeline, mas o relatório JUnit é publicado mesmo assim.
         stage('Test') {
             steps {
-                sh './mvnw -B test'
+                dir('microsservicos/gateway') {
+                    sh './mvnw -B test'
+                }
             }
             post {
                 always {
-                    junit 'target/surefire-reports/*.xml'
+                    junit 'microsservicos/gateway/target/surefire-reports/*.xml'
                 }
             }
         }
 
         stage('Package') {
             steps {
-                sh './mvnw -B package -DskipTests'
-                archiveArtifacts 'target/*.jar'
+                dir('microsservicos/gateway') {
+                    sh './mvnw -B package -DskipTests'
+                }
+                archiveArtifacts 'microsservicos/gateway/target/*.jar'
             }
         }
 
@@ -50,7 +56,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                    cp target/*.jar /opt/supets/app.jar.novo
+                    cp microsservicos/gateway/target/*.jar /opt/supets/app.jar.novo
                     mv /opt/supets/app.jar.novo /opt/supets/app.jar
                     sudo -n systemctl restart supets
                 '''

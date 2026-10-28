@@ -5,6 +5,7 @@ Plataforma de suporte a pets.
 ## Rodar localmente
 
 ```sh
+cd microsservicos/gateway
 ./mvnw clean verify         # compila, testa e gera target/supets-*.jar
 ./mvnw test                 # só os testes
 ./mvnw spring-boot:run      # sobe em http://localhost:8081
