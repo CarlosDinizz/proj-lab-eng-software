@@ -40,10 +40,12 @@ class GatewayIntegrationTest {
     }
 
     @Test
-    void forwardsCitizenAndOngRequestsToCommunity() {
-        assertForwarded("/cidadao/api/v1/7?filter=active", "community|GET|/cidadao/api/v1/7?filter=active|");
-        assertForwarded("/ong/api/v1/8", "community|GET|/ong/api/v1/8|");
-        assertForwarded("/cidadao/api/v1", "community|GET|/cidadao/api/v1|");
+    void forwardsCommunityRequestsWithoutRewritingPath() {
+        assertForwarded("/community/cidadao/api/v1/7?filter=active", "community|GET|/community/cidadao/api/v1/7?filter=active|");
+        assertForwarded("/community/ong/api/v1/8", "community|GET|/community/ong/api/v1/8|");
+        assertForwarded("/community/cidadao/api/v1", "community|GET|/community/cidadao/api/v1|");
+        assertForwarded("/community/v3/api-docs", "community|GET|/community/v3/api-docs|");
+        assertForwarded("/community", "community|GET|/community|");
     }
 
     @Test
@@ -56,21 +58,23 @@ class GatewayIntegrationTest {
     void forwardsMethodBodyAndUpstreamResponse() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/json");
-        ResponseEntity<String> response = client.exchange("/ong/api/v1", HttpMethod.POST,
+        ResponseEntity<String> response = client.exchange("/community/ong/api/v1", HttpMethod.POST,
                 new HttpEntity<>("{\"nome\":\"ONG\"}", headers), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getHeaders().getFirst("X-Upstream")).isEqualTo("community");
-        assertThat(response.getBody()).isEqualTo("community|POST|/ong/api/v1|{\"nome\":\"ONG\"}");
-        ResponseEntity<String> citizenResponse = client.exchange("/cidadao/api/v1", HttpMethod.POST,
+        assertThat(response.getBody()).isEqualTo("community|POST|/community/ong/api/v1|{\"nome\":\"ONG\"}");
+        ResponseEntity<String> citizenResponse = client.exchange("/community/cidadao/api/v1", HttpMethod.POST,
                 new HttpEntity<>("{\"nome\":\"Pessoa\"}", headers), String.class);
         assertThat(citizenResponse.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-        assertThat(citizenResponse.getBody()).isEqualTo("community|POST|/cidadao/api/v1|{\"nome\":\"Pessoa\"}");
+        assertThat(citizenResponse.getBody()).isEqualTo("community|POST|/community/cidadao/api/v1|{\"nome\":\"Pessoa\"}");
     }
 
     @Test
     void keepsStatusLocalAndRejectsOtherPaths() {
         assertThat(client.getForEntity("/api/status", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(client.getForEntity("/ongextra/api/v1/1", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(client.getForEntity("/communityextra/api/v1/1", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(client.getForEntity("/cidadao/api/v1/1", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(client.getForEntity("/ong/api/v1/1", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(client.getForEntity("/unknown", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
