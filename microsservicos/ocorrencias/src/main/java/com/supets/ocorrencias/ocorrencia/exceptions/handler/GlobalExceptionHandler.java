@@ -1,6 +1,11 @@
 package com.supets.ocorrencias.ocorrencia.exceptions.handler;
 
+import com.supets.ocorrencias.ocorrencia.exceptions.TipoOcorrenciaNotFoundException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -32,4 +37,27 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(exception, erros, headers, status, request);
     }
 
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException exception, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        return handleExceptionInternal(exception, Map.of("body", "Corpo da requisição inválido."), headers, status, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleTypeMismatch(
+            TypeMismatchException exception, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        String campo = exception.getPropertyName() == null ? "parametro" : exception.getPropertyName();
+        return handleExceptionInternal(exception, Map.of(campo, "Valor inválido."), headers, status, request);
+    }
+
+    @ExceptionHandler(TipoOcorrenciaNotFoundException.class)
+    public ResponseEntity<Map<String, String>> tipoNaoEncontrado(TipoOcorrenciaNotFoundException exception) {
+        return ResponseEntity.badRequest().body(Map.of("tipoOcorrenciaId", "Tipo de ocorrência não encontrado."));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> erroDeStatus(ResponseStatusException exception) {
+        return ResponseEntity.status(exception.getStatusCode()).body(Map.of("message", exception.getReason()));
+    }
 }
