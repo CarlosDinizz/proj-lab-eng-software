@@ -28,6 +28,15 @@ public class Cidadao {
     @Column(name = "cpf", nullable = false)
     private String cpf;
 
+    private String cep;
+    private String endereco;
+    private String municipio;
+    private String estado;
+    private String email;
+
+    @Column(name = "senha_hash")
+    private String senhaHash;
+
     @OneToMany
     @JoinColumn(name = "cidadao_id")
     private List<Contato> contatos = new ArrayList<>();

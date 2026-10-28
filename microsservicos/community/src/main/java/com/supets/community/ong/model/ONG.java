@@ -25,14 +25,23 @@ public class ONG {
     @Column(name = "nome", nullable = false)
     private String nome;
 
-    @Column(name = "descricao", nullable = false)
+    @Column(name = "descricao")
     private String descricao;
 
-    @Column(name = "cpf", nullable = false)
+    @Column(name = "cnpj", nullable = false)
     private String cnpj;
 
+    private String cep;
+    private String endereco;
+    private String municipio;
+    private String estado;
+    private String email;
+
+    @Column(name = "senha_hash")
+    private String senhaHash;
+
     @OneToMany
-    @JoinColumn(name = "ong_")
+    @JoinColumn(name = "ong_id")
     private List<Contato> contatos = new ArrayList<>();
 
     @OneToOne

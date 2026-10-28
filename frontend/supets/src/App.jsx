@@ -6,7 +6,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Login } from './components/login/Login'
 import { Cadastro } from './components/cadastro/Cadastro'
 import { Home } from './pages/home/Home'
-import { Toaster, toaster } from "@/components/ui/toaster"
+import { Toaster } from "@/components/ui/toaster"
 
 function App() {
   return (

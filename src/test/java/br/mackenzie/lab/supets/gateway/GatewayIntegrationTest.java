@@ -61,6 +61,10 @@ class GatewayIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getHeaders().getFirst("X-Upstream")).isEqualTo("community");
         assertThat(response.getBody()).isEqualTo("community|POST|/ong/api/v1|{\"nome\":\"ONG\"}");
+        ResponseEntity<String> citizenResponse = client.exchange("/cidadao/api/v1", HttpMethod.POST,
+                new HttpEntity<>("{\"nome\":\"Pessoa\"}", headers), String.class);
+        assertThat(citizenResponse.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(citizenResponse.getBody()).isEqualTo("community|POST|/cidadao/api/v1|{\"nome\":\"Pessoa\"}");
     }
 
     @Test

@@ -7,6 +7,8 @@ export default defineConfig({
   plugins: [react(), jsconfigPaths()],
   server: {
     proxy: {
+      "/cidadao": "http://localhost:8081",
+      "/ong": "http://localhost:8081",
       "/ocorrencia": "http://localhost:8081",
     },
   },
