@@ -1,4 +1,4 @@
-import { Button, Card, Flex, Stack, Text } from "@chakra-ui/react";
+import { Button, Card, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 
 export function UltimasOcorrencias() {
@@ -25,7 +25,12 @@ export function UltimasOcorrencias() {
     return (
         <Flex flexDir="column" gap="2">
             <Text fontWeight="bold" fontSize="3xl">Últimas Ocorrências</Text>
-            {situacao === "carregando" && <Text>Carregando ocorrências...</Text>}
+            {situacao === "carregando" && (
+                <Flex role="status" align="center" gap="2">
+                    <Spinner size="sm" color="purple.solid" aria-hidden="true" />
+                    <Text>Carregando ocorrências...</Text>
+                </Flex>
+            )}
             {situacao === "erro" && <Text>Não foi possível carregar as ocorrências.</Text>}
             {situacao === "pronto" && ocorrencias.length === 0 && <Text>Nenhuma ocorrência encontrada.</Text>}
             <Flex gap="4" align="stretch" wrap="wrap">
