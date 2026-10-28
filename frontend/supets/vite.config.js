@@ -5,4 +5,9 @@ import jsconfigPaths from "vite-jsconfig-paths"
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), jsconfigPaths()],
+  server: {
+    proxy: {
+      "/ocorrencia": "http://localhost:8081",
+    },
+  },
 })
