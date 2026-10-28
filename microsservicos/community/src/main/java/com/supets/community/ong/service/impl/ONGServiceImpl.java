@@ -1,61 +1,46 @@
 package com.supets.community.ong.service.impl;
 
 import com.supets.community.ong.dto.OngDto;
-import com.supets.community.ong.exceptions.OngAlreadyExistsException;
 import com.supets.community.ong.model.ONG;
 import com.supets.community.ong.repository.ONGRepository;
 import com.supets.community.ong.service.ONGService;
-import com.supets.community.shared.events.SalvarContatosEvent;
-import com.supets.community.shared.model.Cidade;
-import com.supets.community.shared.model.Estado;
-import com.supets.community.shared.model.Local;
-import com.supets.community.shared.service.CidadeService;
-import com.supets.community.shared.service.EstadoService;
-import com.supets.community.shared.service.LocalService;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
+import com.supets.community.cidadao.repository.CidadaoRepository;
+import com.supets.community.shared.exceptions.CadastroDuplicadoException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 @Service
 public class ONGServiceImpl implements ONGService {
-
     private final ONGRepository repository;
-    private final ApplicationEventPublisher applicationEventPublisher;
-    private final LocalService localService;
+    private final CidadaoRepository outroRepository;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    @Autowired
-    public ONGServiceImpl(ONGRepository repository, ApplicationEventPublisher applicationEventPublisher, LocalService localService) {
+    public ONGServiceImpl(ONGRepository repository, CidadaoRepository outroRepository) {
         this.repository = repository;
-        this.applicationEventPublisher = applicationEventPublisher;
-        this.localService = localService;
+        this.outroRepository = outroRepository;
     }
 
     @Override
     @Transactional
-    public void createOng(OngDto request) {
-        Optional<ONG> ongEncontrada = repository.findByCnpj(request.cnpj());
-
-        if (ongEncontrada.isPresent()) throw new OngAlreadyExistsException();
-
-        ONG ong = new ONG();
-        ong.setCnpj(request.cnpj());
-        ong.setNome(request.nome());
-        ong.setDescricao(request.descricao());
-
-        Local local = localService.saveLocal(request.local());
-
-        ong.setLocal(local);
-        ong = repository.save(ong);
-
-        // Salvando contatos da ONG
-        applicationEventPublisher.publishEvent(new SalvarContatosEvent(request.contatos(), ong.getId(), null));
+    public UUID createOng(OngDto request) {
+        if (repository.existsByCnpj(request.cnpj()))
+            throw new CadastroDuplicadoException("cnpj", "CNPJ já cadastrado");
+        if (repository.existsByEmailIgnoreCase(request.email()) || outroRepository.existsByEmailIgnoreCase(request.email()))
+            throw new CadastroDuplicadoException("email", "E-mail já cadastrado");
+        ONG cadastro = new ONG();
+        cadastro.setNome(request.nome());
+        cadastro.setCnpj(request.cnpj());
+        cadastro.setCep(request.cep());
+        cadastro.setEndereco(request.endereco());
+        cadastro.setMunicipio(request.municipio());
+        cadastro.setEstado(request.estado());
+        cadastro.setEmail(request.email());
+        cadastro.setSenhaHash(encoder.encode(request.senha()));
+        return repository.saveAndFlush(cadastro).getId();
     }
 
     @Override
-    public String getOng(Integer id) {
-        return "ONG - " + id;
-    }
+    public String getOng(Integer id) { return "ONG -  " + id; }
 }
