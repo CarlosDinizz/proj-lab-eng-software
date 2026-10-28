@@ -1,12 +1,34 @@
 import { Button, Card, Flex, Stack, Text } from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 
 export function UltimasOcorrencias() {
-    const ocorrencias = getOcorrencias();
+    const [ocorrencias, setOcorrencias] = useState([]);
+    const [situacao, setSituacao] = useState("carregando");
+
+    useEffect(() => {
+        const controller = new AbortController();
+        fetch("/ocorrencia/api/v1", { signal: controller.signal })
+            .then((response) => {
+                if (!response.ok) throw new Error("Falha ao carregar ocorrências");
+                return response.json();
+            })
+            .then((dados) => {
+                setOcorrencias(dados.slice(0, 3));
+                setSituacao("pronto");
+            })
+            .catch((error) => {
+                if (error.name !== "AbortError") setSituacao("erro");
+            });
+        return () => controller.abort();
+    }, []);
 
     return (
         <Flex flexDir="column" gap="2">
             <Text fontWeight="bold" fontSize="3xl">Últimas Ocorrências</Text>
-            <Flex gap="4" align="stretch">
+            {situacao === "carregando" && <Text>Carregando ocorrências...</Text>}
+            {situacao === "erro" && <Text>Não foi possível carregar as ocorrências.</Text>}
+            {situacao === "pronto" && ocorrencias.length === 0 && <Text>Nenhuma ocorrência encontrada.</Text>}
+            <Flex gap="4" align="stretch" wrap="wrap">
                 {ocorrencias.map((ocorrencia) =>
                     <Card.Root
                         key={ocorrencia.id}
@@ -32,7 +54,7 @@ export function UltimasOcorrencias() {
                             <Card.Footer mt="auto" p="0">
                                 <Stack gap="2" align="start">
                                     <Text fontSize="14px" >
-                                        Local: {ocorrencia.local}
+                                        Local: {ocorrencia.endereco}, {ocorrencia.cidade} - {ocorrencia.estado}
                                     </Text>
 
                                     <Button>
@@ -46,12 +68,4 @@ export function UltimasOcorrencias() {
             </Flex>
         </Flex>
     );
-}
-
-function getOcorrencias() {
-    return [
-        { id: 1, titulo: "Cão abandonado", descricao: "Michael Jackson foi abandonado e é constantemente visto...", local: "Parque Artur Alvim" },
-        { id: 2, titulo: "Gato desaparecido", descricao: "Meu gato Joãozinho sumiu no dia 20/11/2026 em...", local: "Praça Higienópolis" },
-        { id: 3, titulo: "Leão desaparecido", descricao: "Zé desapareceu do zoológico...", local: "Zoológico Barra Funda" }
-    ]
 }
