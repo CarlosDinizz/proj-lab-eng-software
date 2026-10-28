@@ -1,3 +1,5 @@
+/* Chakra UI snippets export components alongside their shared helpers. */
+/* eslint-disable react-refresh/only-export-components */
 'use client'
 
 import {
