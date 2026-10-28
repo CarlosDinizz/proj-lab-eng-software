@@ -37,7 +37,7 @@ export function Cadastro() {
 
         setEnviando(true);
         try {
-            const resposta = await fetch(`/${tipo}/api/v1`, {
+            const resposta = await fetch(`/community/${tipo}/api/v1`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(dados),

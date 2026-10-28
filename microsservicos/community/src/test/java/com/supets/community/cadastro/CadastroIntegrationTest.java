@@ -81,7 +81,7 @@ class CadastroIntegrationTest {
     }
 
     private HttpResponse<String> post(String tipo, String body) throws Exception {
-        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/" + tipo + "/api/v1"))
+        var request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/community/" + tipo + "/api/v1"))
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
