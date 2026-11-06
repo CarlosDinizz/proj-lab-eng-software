@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface ONGRepository extends JpaRepository<ONG, UUID> {
     boolean existsByCnpj(String cnpj);
     boolean existsByEmailIgnoreCase(String email);
+    Optional<ONG> findByEmailIgnoreCase(String email);
 }

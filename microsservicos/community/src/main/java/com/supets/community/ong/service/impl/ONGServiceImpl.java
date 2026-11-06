@@ -5,10 +5,13 @@ import com.supets.community.ong.model.ONG;
 import com.supets.community.ong.repository.ONGRepository;
 import com.supets.community.ong.service.ONGService;
 import com.supets.community.cidadao.repository.CidadaoRepository;
+import com.supets.community.shared.dto.CredencialDto;
+import com.supets.community.shared.enums.PerfilEnum;
 import com.supets.community.shared.exceptions.CadastroDuplicadoException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -43,4 +46,11 @@ public class ONGServiceImpl implements ONGService {
 
     @Override
     public String getOng(Integer id) { return "ONG -  " + id; }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CredencialDto> buscarCredencial(String email) {
+        return repository.findByEmailIgnoreCase(email)
+            .map(o -> new CredencialDto(o.getId(), o.getNome(), o.getSenhaHash(), PerfilEnum.ONG));
+    }
 }

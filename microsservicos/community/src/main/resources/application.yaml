@@ -11,3 +11,9 @@ spring:
         url: jdbc:postgresql://${PG_HOST:localhost}:5431/community
         username: ${PG_USER:root}
         password: ${PG_PASSWORD:root}
+
+supets:
+    jwt:
+        # Em produção, defina JWT_SECRET (mínimo 32 caracteres). O padrão abaixo é só para desenvolvimento.
+        segredo: ${JWT_SECRET:supets-dev-segredo-local-troque-em-producao}
+        expiracao: ${JWT_EXPIRACAO:2h}

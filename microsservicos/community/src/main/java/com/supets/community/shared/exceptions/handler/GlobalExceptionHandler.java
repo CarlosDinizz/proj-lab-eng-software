@@ -1,6 +1,7 @@
 package com.supets.community.shared.exceptions.handler;
 
 import com.supets.community.shared.exceptions.CadastroDuplicadoException;
+import com.supets.community.shared.exceptions.CredenciaisInvalidasException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -22,6 +23,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(CadastroDuplicadoException.class)
     public ResponseEntity<Map<String, String>> cadastroDuplicado(CadastroDuplicadoException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(exception.getCampo(), exception.getMessage()));
+    }
+
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    public ResponseEntity<Map<String, String>> credenciaisInvalidas(CredenciaisInvalidasException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("login", exception.getMessage()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

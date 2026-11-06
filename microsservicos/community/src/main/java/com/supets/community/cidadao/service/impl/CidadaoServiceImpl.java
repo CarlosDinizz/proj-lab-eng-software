@@ -5,10 +5,13 @@ import com.supets.community.cidadao.model.Cidadao;
 import com.supets.community.cidadao.repository.CidadaoRepository;
 import com.supets.community.cidadao.service.CidadaoService;
 import com.supets.community.ong.repository.ONGRepository;
+import com.supets.community.shared.dto.CredencialDto;
+import com.supets.community.shared.enums.PerfilEnum;
 import com.supets.community.shared.exceptions.CadastroDuplicadoException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -43,4 +46,11 @@ public class CidadaoServiceImpl implements CidadaoService {
 
     @Override
     public String getCidadao(Integer id) { return "Cidadão -  " + id; }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CredencialDto> buscarCredencial(String email) {
+        return repository.findByEmailIgnoreCase(email)
+            .map(c -> new CredencialDto(c.getId(), c.getNome(), c.getSenhaHash(), PerfilEnum.CIDADAO));
+    }
 }
