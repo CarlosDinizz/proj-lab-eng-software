@@ -7,24 +7,27 @@ import { Login } from './components/login/Login'
 import { Cadastro } from './components/cadastro/Cadastro'
 import { Home } from './pages/home/Home'
 import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from './auth/AuthProvider'
 
 function App() {
   return (
     <>
         <BrowserRouter>
-            <Flex direction="column" minHeight="100vh">
-                <Navbar />
-                <Box as="main" flex="1">
-                    <Routes>
-                        <Route path="/login" element={<Login />}/>
-                        <Route path="/cadastro" element={<Cadastro />} />
-                        <Route path="/" element={<Home />}/>
-                        <Route path="*" element={<Home />}/>
-                    </Routes>
-                </Box>
-                <Toaster />
-                <Footer />
-            </Flex>
+            <AuthProvider>
+                <Flex direction="column" minHeight="100vh">
+                    <Navbar />
+                    <Box as="main" flex="1">
+                        <Routes>
+                            <Route path="/login" element={<Login />}/>
+                            <Route path="/cadastro" element={<Cadastro />} />
+                            <Route path="/" element={<Home />}/>
+                            <Route path="*" element={<Home />}/>
+                        </Routes>
+                    </Box>
+                    <Toaster />
+                    <Footer />
+                </Flex>
+            </AuthProvider>
         </BrowserRouter>
     </>
 
