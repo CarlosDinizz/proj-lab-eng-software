@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { Box, Button, Card, Field, Input, Link, Stack, Text } from "@chakra-ui/react";
-import { Navigate, Link as RouterLink, useNavigate } from "react-router-dom";
+import { Navigate, Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/auth/useAuth";
 
 export function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { usuario, entrar } = useAuth();
+    // Quem foi mandado para cá por uma tela protegida volta para ela depois de entrar
+    const destino = location.state?.de ?? "/";
     const [valores, setValores] = useState({ email: "", senha: "" });
     const [enviando, setEnviando] = useState(false);
 
     // Quem já está logado não precisa ver a tela de login
-    if (usuario) return <Navigate to="/" replace />;
+    if (usuario) return <Navigate to={destino} replace />;
 
     function alterar(event) {
         const { name, value } = event.target;
@@ -39,7 +42,7 @@ export function Login() {
             }
             entrar(corpo);
             toaster.create({ title: `Bem-vindo, ${corpo.nome}!`, type: "success" });
-            navigate("/");
+            navigate(destino);
         } catch (error) {
             toaster.create({ title: "Não foi possível entrar", description: error.message, type: "error" });
         } finally {

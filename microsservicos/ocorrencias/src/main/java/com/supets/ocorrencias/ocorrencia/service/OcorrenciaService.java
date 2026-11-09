@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OcorrenciaService {
-    OcorrenciaRespostaDto criar(CriarOcorrenciaDto dados);
+    OcorrenciaRespostaDto criar(UsuarioAutenticado autor, CriarOcorrenciaDto dados);
     OcorrenciaRespostaDto buscar(UUID id);
     List<OcorrenciaRespostaDto> listar(StatusOcorrencia status);
-    OcorrenciaRespostaDto atualizarStatus(UUID id, AtualizarStatusDto dados);
+    OcorrenciaRespostaDto atualizarStatus(UUID id, UsuarioAutenticado usuario, AtualizarStatusDto dados);
     List<TipoOcorrencia> listarTipos();
 }
