@@ -26,14 +26,14 @@ public class OcorrenciaServiceImpl implements OcorrenciaService {
 
     @Override
     @Transactional
-    public OcorrenciaRespostaDto criar(CriarOcorrenciaDto dados) {
+    public OcorrenciaRespostaDto criar(UsuarioAutenticado autor, CriarOcorrenciaDto dados) {
         TipoOcorrencia tipo = tipos.findById(dados.tipoOcorrenciaId())
             .orElseThrow(TipoOcorrenciaNotFoundException::new);
         Ocorrencia o = new Ocorrencia();
         o.setTitulo(dados.titulo());
         o.setDescricao(dados.descricao());
         o.setTipoOcorrencia(tipo);
-        o.setCidadaoId(dados.cidadaoId());
+        o.setCidadaoId(autor.id());
         o.setStatus(StatusOcorrencia.ABERTA);
         o.setCreatedAt(Instant.now());
         o.setEndereco(dados.endereco());
@@ -64,13 +64,22 @@ public class OcorrenciaServiceImpl implements OcorrenciaService {
 
     @Override
     @Transactional
-    public OcorrenciaRespostaDto atualizarStatus(UUID id, AtualizarStatusDto dados) {
+    public OcorrenciaRespostaDto atualizarStatus(UUID id, UsuarioAutenticado usuario, AtualizarStatusDto dados) {
         Ocorrencia o = repository.findByIdForUpdate(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ocorrência não encontrada."));
-        if (o.getStatus() == StatusOcorrencia.ABERTA && dados.status() == StatusOcorrencia.EM_ANDAMENTO && dados.ongId() != null) {
-            o.setOngId(dados.ongId());
-        } else if (o.getStatus() != StatusOcorrencia.EM_ANDAMENTO || dados.status() != StatusOcorrencia.RESOLVIDA) {
+        boolean assumir = o.getStatus() == StatusOcorrencia.ABERTA && dados.status() == StatusOcorrencia.EM_ANDAMENTO;
+        boolean resolver = o.getStatus() == StatusOcorrencia.EM_ANDAMENTO && dados.status() == StatusOcorrencia.RESOLVIDA;
+        if (!assumir && !resolver) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Transição de status inválida.");
+        }
+        if (assumir) {
+            if (!usuario.ehOng()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Apenas ONGs podem assumir uma ocorrência.");
+            }
+            o.setOngId(usuario.id());
+        } else if (!usuario.id().equals(o.getOngId()) && !usuario.id().equals(o.getCidadaoId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Apenas a ONG responsável ou quem registrou a ocorrência pode resolvê-la.");
         }
         o.setStatus(dados.status());
         return OcorrenciaRespostaDto.de(repository.save(o));

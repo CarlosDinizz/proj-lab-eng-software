@@ -19,8 +19,12 @@ public class OcorrenciaController {
     public OcorrenciaController(OcorrenciaService service) { this.service = service; }
 
     @PostMapping
-    public ResponseEntity<OcorrenciaRespostaDto> criar(@Valid @RequestBody CriarOcorrenciaDto dados) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(dados));
+    public ResponseEntity<OcorrenciaRespostaDto> criar(
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_ID, required = false) String usuarioId,
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_PERFIL, required = false) String perfil,
+            @Valid @RequestBody CriarOcorrenciaDto dados) {
+        UsuarioAutenticado autor = UsuarioAutenticado.de(usuarioId, perfil);
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(autor, dados));
     }
 
     @GetMapping
@@ -35,7 +39,11 @@ public class OcorrenciaController {
     public OcorrenciaRespostaDto buscar(@PathVariable UUID id) { return service.buscar(id); }
 
     @PatchMapping("/{id}/status")
-    public OcorrenciaRespostaDto atualizarStatus(@PathVariable UUID id, @Valid @RequestBody AtualizarStatusDto dados) {
-        return service.atualizarStatus(id, dados);
+    public OcorrenciaRespostaDto atualizarStatus(
+            @PathVariable UUID id,
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_ID, required = false) String usuarioId,
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_PERFIL, required = false) String perfil,
+            @Valid @RequestBody AtualizarStatusDto dados) {
+        return service.atualizarStatus(id, UsuarioAutenticado.de(usuarioId, perfil), dados);
     }
 }

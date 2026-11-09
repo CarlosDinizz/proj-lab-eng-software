@@ -2,13 +2,16 @@ package br.mackenzie.lab.supets.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.mackenzie.lab.supets.seguranca.TokensDeTeste;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
@@ -26,6 +29,9 @@ class GatewayIntegrationTest {
 
     @Autowired
     private TestRestTemplate client;
+
+    @Value("${supets.jwt.segredo}")
+    private String segredo;
 
     @DynamicPropertySource
     static void upstreamAddresses(DynamicPropertyRegistry properties) {
@@ -72,16 +78,23 @@ class GatewayIntegrationTest {
     @Test
     void keepsStatusLocalAndRejectsOtherPaths() {
         assertThat(client.getForEntity("/api/status", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(client.getForEntity("/communityextra/api/v1/1", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(client.getForEntity("/cidadao/api/v1/1", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(client.getForEntity("/ong/api/v1/1", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(client.getForEntity("/unknown", String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(getAutenticado("/communityextra/api/v1/1").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(getAutenticado("/cidadao/api/v1/1").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(getAutenticado("/ong/api/v1/1").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(getAutenticado("/unknown").getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     private void assertForwarded(String path, String expected) {
-        ResponseEntity<String> response = client.getForEntity(path, String.class);
+        ResponseEntity<String> response = getAutenticado(path);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody()).isEqualTo(expected);
+    }
+
+    // Estes testes cobrem o roteamento; as regras de login ficam em AutenticacaoGatewayTest.
+    private ResponseEntity<String> getAutenticado(String path) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(TokensDeTeste.valido(segredo, UUID.randomUUID().toString(), "CIDADAO"));
+        return client.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), String.class);
     }
 
     private static String address(HttpServer server) {

@@ -12,3 +12,9 @@ spring:
                           uri: ${OCORRENCIAS_URL:http://localhost:8082}
                           predicates:
                               - Path=/ocorrencia/api/v1/**
+
+supets:
+    jwt:
+        # Precisa ser o mesmo JWT_SECRET do community, que assina os tokens (mínimo 32 caracteres).
+        # O padrão abaixo é só para desenvolvimento.
+        segredo: ${JWT_SECRET:supets-dev-segredo-local-troque-em-producao}
