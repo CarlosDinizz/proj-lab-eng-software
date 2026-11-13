@@ -1,5 +1,6 @@
 package com.supets.ocorrencias.ocorrencia.exceptions.handler;
 
+import com.supets.ocorrencias.ocorrencia.exceptions.OpcaoInvalidaException;
 import com.supets.ocorrencias.ocorrencia.exceptions.TipoOcorrenciaNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
@@ -54,6 +55,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(TipoOcorrenciaNotFoundException.class)
     public ResponseEntity<Map<String, String>> tipoNaoEncontrado(TipoOcorrenciaNotFoundException exception) {
         return ResponseEntity.badRequest().body(Map.of("tipoOcorrenciaId", "Tipo de ocorrência não encontrado."));
+    }
+
+    @ExceptionHandler(OpcaoInvalidaException.class)
+    public ResponseEntity<Map<String, String>> opcaoInvalida(OpcaoInvalidaException exception) {
+        return ResponseEntity.badRequest().body(Map.of(exception.getCampo(), exception.getMessage()));
     }
 
     @ExceptionHandler(ResponseStatusException.class)

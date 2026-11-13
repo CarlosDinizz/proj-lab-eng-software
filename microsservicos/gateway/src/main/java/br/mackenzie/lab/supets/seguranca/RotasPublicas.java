@@ -8,6 +8,7 @@ public final class RotasPublicas {
 
     private record Rota(String metodo, String caminho) {}
 
+    // Ocorrências não entram aqui: até para ver é preciso login (UC003, pré-condição "está autenticado").
     private static final List<Rota> ROTAS = List.of(
         new Rota("GET", "/api/status"),
         new Rota("POST", "/community/auth/api/v1/login"),
@@ -15,8 +16,7 @@ public final class RotasPublicas {
         new Rota("POST", "/community/ong/api/v1"),
         new Rota("GET", "/community/ong/api/v1/**"),
         new Rota("GET", "/community/v3/api-docs/**"),
-        new Rota("GET", "/community/swagger-ui/**"),
-        new Rota("GET", "/ocorrencia/api/v1/**"));
+        new Rota("GET", "/community/swagger-ui/**"));
 
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
 

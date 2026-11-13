@@ -8,6 +8,10 @@ import { Cadastro } from './components/cadastro/Cadastro'
 import { Home } from './pages/home/Home'
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from './auth/AuthProvider'
+import { RotaProtegida } from './auth/RotaProtegida'
+import { NovaOcorrencia } from './components/ocorrencia/NovaOcorrencia'
+import { ListaOcorrencias } from './components/ocorrencia/ListaOcorrencias'
+import { DetalheOcorrencia } from './components/ocorrencia/DetalheOcorrencia'
 
 function App() {
   return (
@@ -20,6 +24,13 @@ function App() {
                         <Routes>
                             <Route path="/login" element={<Login />}/>
                             <Route path="/cadastro" element={<Cadastro />} />
+                            {/* UC003 e UC002 exigem login; UC001 é só para cidadão */}
+                            <Route path="/ocorrencias" element={<RotaProtegida><ListaOcorrencias /></RotaProtegida>} />
+                            <Route path="/ocorrencias/minhas" element={<RotaProtegida><ListaOcorrencias minhas /></RotaProtegida>} />
+                            <Route path="/ocorrencias/nova" element={
+                                <RotaProtegida perfil="CIDADAO"><NovaOcorrencia /></RotaProtegida>
+                            } />
+                            <Route path="/ocorrencias/:id" element={<RotaProtegida><DetalheOcorrencia /></RotaProtegida>} />
                             <Route path="/" element={<Home />}/>
                             <Route path="*" element={<Home />}/>
                         </Routes>

@@ -8,7 +8,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/community": "http://localhost:8081",
-      "/ocorrencia": "http://localhost:8081",
+      // Com a barra no fim: "/ocorrencias/..." são páginas do front e não podem ir para o back
+      "/ocorrencia/": "http://localhost:8081",
     },
   },
 })
