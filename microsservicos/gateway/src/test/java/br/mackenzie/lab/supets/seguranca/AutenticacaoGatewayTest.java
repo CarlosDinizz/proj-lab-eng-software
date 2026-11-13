@@ -43,7 +43,6 @@ class AutenticacaoGatewayTest {
 
     @Test
     void rotasPublicasDispensamToken() throws Exception {
-        assertThat(enviar("GET", "/ocorrencia/api/v1").statusCode()).isEqualTo(202);
         assertThat(enviar("GET", "/community/ong/api/v1/8").statusCode()).isEqualTo(202);
         assertThat(enviar("POST", "/community/auth/api/v1/login").statusCode()).isEqualTo(202);
         assertThat(enviar("POST", "/community/cidadao/api/v1").statusCode()).isEqualTo(202);
@@ -59,6 +58,10 @@ class AutenticacaoGatewayTest {
         assertThat(resposta.statusCode()).isEqualTo(401);
         assertThat(resposta.body()).contains("login");
         assertThat(enviar("PATCH", "/ocorrencia/api/v1/" + UUID.randomUUID() + "/status").statusCode()).isEqualTo(401);
+        // UC003: ver ocorrências também exige login
+        assertThat(enviar("GET", "/ocorrencia/api/v1").statusCode()).isEqualTo(401);
+        assertThat(enviar("GET", "/ocorrencia/api/v1/" + UUID.randomUUID()).statusCode()).isEqualTo(401);
+        assertThat(enviar("GET", "/ocorrencia/api/v1/tipos").statusCode()).isEqualTo(401);
         assertThat(enviar("GET", "/community/cidadao/api/v1/1").statusCode()).isEqualTo(401);
         assertThat(enviar("GET", "/rota/inexistente").statusCode()).isEqualTo(401);
 
@@ -91,7 +94,7 @@ class AutenticacaoGatewayTest {
         for (String token : tokens) {
             assertThat(enviar("POST", "/ocorrencia/api/v1", "Authorization", "Bearer " + token).statusCode()).isEqualTo(401);
             // Token ruim é recusado mesmo em rota pública.
-            assertThat(enviar("GET", "/ocorrencia/api/v1", "Authorization", "Bearer " + token).statusCode()).isEqualTo(401);
+            assertThat(enviar("GET", "/community/ong/api/v1/8", "Authorization", "Bearer " + token).statusCode()).isEqualTo(401);
         }
 
         assertThat(CHAMADAS.get()).isEqualTo(antes);
@@ -100,8 +103,8 @@ class AutenticacaoGatewayTest {
     @Test
     void clienteNaoConsegueForjarOsCabecalhosDeUsuario() throws Exception {
         String forjado = UUID.randomUUID().toString();
-        var publica = enviar("GET", "/ocorrencia/api/v1", "X-Usuario-Id", forjado, "X-Usuario-Perfil", "ONG");
-        assertThat(publica.body()).isEqualTo("GET|/ocorrencia/api/v1|-|-");
+        var publica = enviar("GET", "/community/ong/api/v1/8", "X-Usuario-Id", forjado, "X-Usuario-Perfil", "ONG");
+        assertThat(publica.body()).isEqualTo("GET|/community/ong/api/v1/8|-|-");
 
         String id = UUID.randomUUID().toString();
         var autenticada = enviar("POST", "/ocorrencia/api/v1",

@@ -13,6 +13,8 @@ import java.util.UUID;
 public interface OcorrenciaRepository extends JpaRepository<Ocorrencia, UUID> {
     List<Ocorrencia> findAllByOrderByCreatedAtDesc();
     List<Ocorrencia> findByStatusOrderByCreatedAtDesc(StatusOcorrencia status);
+    List<Ocorrencia> findByLatBetweenAndLonBetween(double latMin, double latMax, double lonMin, double lonMax);
+    List<Ocorrencia> findByCidadaoIdOrResponsavelIdOrderByCreatedAtDesc(UUID cidadaoId, UUID responsavelId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from Ocorrencia o where o.id = ?1")

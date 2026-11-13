@@ -1,3 +1,13 @@
 INSERT INTO tipo_ocorrencia (id, tipo) VALUES (1, 'Animal Abandonado');
 INSERT INTO tipo_ocorrencia (id, tipo) VALUES (2, 'Animal em Apuros');
 INSERT INTO tipo_ocorrencia (id, tipo) VALUES (3, 'Animal em Necessidade de Assitência Médica');
+INSERT INTO especie (id, nome) VALUES (1, 'Cachorro');
+INSERT INTO especie (id, nome) VALUES (2, 'Gato');
+INSERT INTO especie (id, nome) VALUES (3, 'Ave');
+INSERT INTO especie (id, nome) VALUES (4, 'Outro');
+INSERT INTO porte (id, nome) VALUES (1, 'Pequeno');
+INSERT INTO porte (id, nome) VALUES (2, 'Médio');
+INSERT INTO porte (id, nome) VALUES (3, 'Grande');
+INSERT INTO sexo_animal (id, nome) VALUES (1, 'Macho');
+INSERT INTO sexo_animal (id, nome) VALUES (2, 'Fêmea');
+INSERT INTO sexo_animal (id, nome) VALUES (3, 'Não identificado');

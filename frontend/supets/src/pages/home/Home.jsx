@@ -1,6 +1,7 @@
 import { Carrousel } from "@/components/layout/carrousel/Carrousel";
 import { Layout } from "@/components/layout/Layout";
 import  { UltimasOcorrencias }  from "@/components/ocorrencia/UltimasOcorrencias";
+import { AtalhosOcorrencia } from "@/components/ocorrencia/AtalhosOcorrencia";
 import ajude from "../../assets/home/ajude-um-animal.jpeg";
 import fortaleca from "../../assets/home/fortaleca-a-rede-animal.jpeg";
 
@@ -10,6 +11,7 @@ export function Home() {
         <>
             <Carrousel images={getImages()} resolucao={35 / 9}/>
             <Layout>
+                <AtalhosOcorrencia />
                 <UltimasOcorrencias />
             </Layout>
         </>

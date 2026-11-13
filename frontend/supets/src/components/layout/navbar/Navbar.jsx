@@ -54,6 +54,9 @@ export function Navbar() {
 
                     {usuario ? (
                         <>
+                            <Button variant={"outline"} color={"white"} _hover={{ color: 'black' }} onClick={() => navigate("/ocorrencias")}>
+                                Ocorrências
+                            </Button>
                             <Text fontWeight="medium">
                                 Olá, {usuario.nome?.split(" ")[0]}{usuario.perfil === "ONG" ? " (ONG)" : ""}
                             </Text>
