@@ -38,11 +38,11 @@ Versões exatas: `pom.xml` de cada serviço e `frontend/supets/package.json`.
 
 ### Funcionalidades
 
-- [ ] Serviço de campanhas: registrar, visualizar, atualizar e participar (casos de uso 4 a 7).
+- [X] Serviço de campanhas: registrar, visualizar, atualizar e participar (casos de uso 4 a 7).
 - [x] Login de cidadão e ONG: `POST /community/auth/api/v1/login` devolve um JWT e o frontend guarda a sessão.
 - [x] Autenticação e autorização nas rotas: o `gateway` valida o JWT e repassa `X-Usuario-Id` e `X-Usuario-Perfil` aos serviços; rotas sem login ficam em `RotasPublicas`.
 - [ ] Atualizar ocorrência além do status (caso de uso 3).
-- [ ] Telas de criar ocorrência, minhas ocorrências e campanhas, conforme `modelagem/wireframes/`.
+- [X] Telas de criar ocorrência, minhas ocorrências e campanhas, conforme `modelagem/wireframes/`.
 - [ ] Mensageria com RabbitMQ entre serviços, conforme `modelagem/implantacao.md`.
 
 ### Infra e qualidade

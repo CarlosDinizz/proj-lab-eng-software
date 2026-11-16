@@ -12,6 +12,10 @@ import { RotaProtegida } from './auth/RotaProtegida'
 import { NovaOcorrencia } from './components/ocorrencia/NovaOcorrencia'
 import { ListaOcorrencias } from './components/ocorrencia/ListaOcorrencias'
 import { DetalheOcorrencia } from './components/ocorrencia/DetalheOcorrencia'
+import { NovaCampanha } from './components/campanha/NovaCampanha'
+import { EditarCampanha } from './components/campanha/EditarCampanha'
+import { ListaCampanhas } from './components/campanha/ListaCampanhas'
+import { DetalheCampanha } from './components/campanha/DetalheCampanha'
 
 function App() {
   return (
@@ -31,6 +35,17 @@ function App() {
                                 <RotaProtegida perfil="CIDADAO"><NovaOcorrencia /></RotaProtegida>
                             } />
                             <Route path="/ocorrencias/:id" element={<RotaProtegida><DetalheOcorrencia /></RotaProtegida>} />
+                            {/* Campanhas exigem login; criar e editar só ONG; participar só cidadão */}
+                            <Route path="/campanhas" element={<RotaProtegida><ListaCampanhas /></RotaProtegida>} />
+                            <Route path="/campanhas/nova" element={<RotaProtegida perfil="ONG"><NovaCampanha /></RotaProtegida>} />
+                            <Route path="/campanhas/minhas" element={
+                                <RotaProtegida perfil="ONG"><ListaCampanhas lista="minhas" /></RotaProtegida>
+                            } />
+                            <Route path="/campanhas/participadas" element={
+                                <RotaProtegida perfil="CIDADAO"><ListaCampanhas lista="participadas" /></RotaProtegida>
+                            } />
+                            <Route path="/campanhas/:id" element={<RotaProtegida><DetalheCampanha /></RotaProtegida>} />
+                            <Route path="/campanhas/:id/editar" element={<RotaProtegida perfil="ONG"><EditarCampanha /></RotaProtegida>} />
                             <Route path="/" element={<Home />}/>
                             <Route path="*" element={<Home />}/>
                         </Routes>

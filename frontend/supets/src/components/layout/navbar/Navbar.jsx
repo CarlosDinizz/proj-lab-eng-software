@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Tabs, Text } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/auth/useAuth";
 import { toaster } from "@/components/ui/toaster";
 
@@ -8,7 +8,15 @@ export function Navbar() {
     const navigate = useNavigate();
     const { usuario, sair } = useAuth();
 
+    const { pathname } = useLocation();
     const tabs = getTabs();
+    // A aba marcada acompanha a página aberta; em outras páginas nenhuma fica marcada
+    const abaAtual = tabs.find((aba) => aba.rota && (aba.rota === "/" ? pathname === "/" : pathname.startsWith(aba.rota)))?.value ?? null;
+
+    function abrirAba(valor) {
+        const rota = tabs.find((aba) => aba.value === valor)?.rota;
+        if (rota) navigate(rota);
+    }
 
     function moveToLogin() {
         navigate("/login");
@@ -29,7 +37,7 @@ export function Navbar() {
             <Box bg={"purple.700"} width={"100%"} height={"5rem"} padding={"20px"}>
                 <Flex gap={"1rem"} color={"white"} justifyContent={"end"} textAlign={"center"} alignItems={"center"} alignContent={"center"} height={"100%"}>
 
-                    <Tabs.Root defaultValue="inicio" variant="plain">
+                    <Tabs.Root value={abaAtual} onValueChange={({ value }) => abrirAba(value)} variant="plain">
                         <Tabs.List borderBottom="none">
                             {tabs.map((valor) =>
                                 <Tabs.Trigger
@@ -84,7 +92,8 @@ export function Navbar() {
 
 function getTabs() {
     return [
-        { id: 1, title: "Início", value: "inicio", color: "white" }, { id: 2, title: "Campanhas", value: "campanhas", color: "white" },
+        { id: 1, title: "Início", value: "inicio", color: "white", rota: "/" },
+        { id: 2, title: "Campanhas", value: "campanhas", color: "white", rota: "/campanhas" },
         { id: 3, title: "Sobre", value: "sobre", color: "white" }
     ];
 }
