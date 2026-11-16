@@ -1,0 +1,15 @@
+[Unit]
+Description=SuPets - community (porta 8083; a 8080 é do Jenkins)
+After=network.target docker.service
+
+[Service]
+User=jenkins
+WorkingDirectory=/opt/supets
+EnvironmentFile=/etc/supets/supets.env
+Environment=SERVER_PORT=8083
+ExecStart=/usr/bin/java -Xmx384m -jar /opt/supets/community.jar
+SuccessExitStatus=143
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

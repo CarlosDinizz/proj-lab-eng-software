@@ -47,10 +47,10 @@ Versões exatas: `pom.xml` de cada serviço e `frontend/supets/package.json`.
 
 ### Infra e qualidade
 
-- [ ] Pipeline do Jenkins para `community`, `ocorrencias` e frontend; hoje só cobre o `gateway`.
+- [x] Pipeline do Jenkins para `gateway`, `community`, `ocorrencias` e frontend (`Jenkinsfile`; passo a passo em `deploy/README.md`).
 - [ ] Imagens Docker dos serviços, conforme o diagrama de implantação.
-- [ ] Deploy de `community`, `ocorrencias`, bancos e frontend na AWS.
-- [ ] Retirar `microsservicos/ocorrencias/.env` do Git; manter só o `.env.example`.
+- [ ] Executar o deploy na AWS (EC2 + Jenkins + webhook): scripts prontos em `deploy/`, falta aplicar no servidor.
+- [x] Retirar `microsservicos/ocorrencias/.env` do Git; manter só o `.env.example`.
 - [ ] Definir o mesmo `JWT_SECRET` no `gateway` e no `community` no servidor; o valor padrão do código é só para desenvolvimento.
 - [ ] Expor só o `gateway` na rede: `community` e `ocorrencias` confiam nos cabeçalhos `X-Usuario-*` que ele envia.
 - [ ] Testes do frontend além da configuração do Vite.
