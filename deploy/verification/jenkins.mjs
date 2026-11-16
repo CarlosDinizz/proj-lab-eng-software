@@ -39,7 +39,7 @@ export async function executeCI(project) {
   await docker(['buildx', 'build', '--load', '--platform', platform, '-f', 'deploy/Dockerfile.jenkins', '-t', tag, '.'], { cwd: root });
   const image = await inspect('image', tag);
   if (image.Os !== 'linux' || image.Architecture !== architecture) throw new Error('Built Jenkins image architecture mismatch');
-  const env = { COMPOSE_PROJECT_NAME: project.name, SUPETS_PROJECT: project.settings.project, SUPETS_PLATFORM: project.settings.platform, JENKINS_PLATFORM: platform, JENKINS_IMAGE: image.Id, DOCKER_SOCKET_GID: String(socketStat.gid), SUPETS_STATE_VOLUME: stateVolume, SUPETS_SOCKET_PATH: socket.Source };
+  const env = { COMPOSE_PROJECT_NAME: project.name, SUPETS_PROJECT: project.settings.project, SUPETS_PLATFORM: project.settings.platform, SUPETS_PUBLIC_PORT: String(project.settings.port), SUPETS_CLOUD: String(project.settings.cloud === true), JENKINS_PLATFORM: platform, JENKINS_IMAGE: image.Id, DOCKER_SOCKET_GID: String(socketStat.gid), SUPETS_STATE_VOLUME: stateVolume, SUPETS_SOCKET_PATH: socket.Source };
   const compose = (args, settings = {}) => docker(['compose', '--project-name', project.name, '--project-directory', root, '--env-file', '/dev/null', '-f', 'deploy/compose.ci.yml', ...args], { cwd: root, env, ...settings });
   await compose(['config', '--quiet'], { capture: true });
   // Persist before starting so down/status/logs can manage even an unhealthy first boot.

@@ -11,10 +11,10 @@ pipeline {
     }
     parameters {
         string(name: 'CANDIDATE_ID', defaultValue: '', description: 'Candidate mode only: reviewed ID, incoming/<id>.tar and its .tar.sha256 must already be in this workspace.')
-        string(name: 'PROJECT', defaultValue: 'supets-local', description: 'Must match the project owning this Jenkins control volume.')
-        string(name: 'PUBLIC_PORT', defaultValue: '8180', description: 'Existing local application port; keep the operator’s project port unchanged.')
-        choice(name: 'TARGET_PLATFORM', choices: ['linux/amd64', 'linux/arm64'], description: 'Target architecture of all build, test and runtime images.')
-        booleanParam(name: 'CLOUD', defaultValue: false, description: 'Reuse this project’s existing cloud address/TLS configuration; never initialize it in Jenkins.')
+        string(name: 'PROJECT', defaultValue: env.SUPETS_PROJECT ?: 'supets-local', description: 'Must match the project owning this Jenkins control volume.')
+        string(name: 'PUBLIC_PORT', defaultValue: env.SUPETS_PUBLIC_PORT ?: '8180', description: 'Existing local application port; keep the operator’s project port unchanged.')
+        choice(name: 'TARGET_PLATFORM', choices: env.SUPETS_PLATFORM == 'linux/arm64' ? ['linux/arm64', 'linux/amd64'] : ['linux/amd64', 'linux/arm64'], description: 'Target architecture of all build, test and runtime images.')
+        booleanParam(name: 'CLOUD', defaultValue: env.SUPETS_CLOUD == 'true', description: 'Reuse this project’s existing cloud address/TLS configuration; never initialize it in Jenkins.')
     }
     stages {
         stage('Select trusted job track') {

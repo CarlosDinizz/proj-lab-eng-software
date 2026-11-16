@@ -17,6 +17,8 @@ services:
             DOCKER_HOST: unix:///var/run/docker.sock
             SUPETS_PROJECT: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
             SUPETS_PLATFORM: ${SUPETS_PLATFORM:?Defina SUPETS_PLATFORM}
+            SUPETS_PUBLIC_PORT: ${SUPETS_PUBLIC_PORT:-8180}
+            SUPETS_CLOUD: ${SUPETS_CLOUD:-false}
         ports:
             - "127.0.0.1:18080:8080"
         volumes:
