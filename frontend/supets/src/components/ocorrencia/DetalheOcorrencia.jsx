@@ -1,37 +1,48 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Box, Button, Card, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toaster } from "@/components/ui/toaster";
 import { useApi } from "@/auth/useApi";
 import { useAuth } from "@/auth/useAuth";
 import { MapaPonto } from "./Mapa";
-import { STATUS, acoesPermitidas, formatarData } from "./ocorrencias";
+import { STATUS, acoesPermitidas, formatarData, podeEditar } from "./ocorrencias";
 
 /** UC002: Atualizar ocorrência — mostra os detalhes e deixa assumir ou marcar como resolvida. */
 export function DetalheOcorrencia() {
     const { id } = useParams();
+    return <ConteudoOcorrencia key={id} id={id} />;
+}
+
+function ConteudoOcorrencia({ id }) {
     const api = useApi();
     const navigate = useNavigate();
     const { usuario } = useAuth();
     const [resultado, setResultado] = useState(null);
     const [enviando, setEnviando] = useState(false);
+    const pendente = useRef(false);
+    const [tentativa, setTentativa] = useState(0);
+    const ativa = useRef(true);
+    useEffect(() => { ativa.current = true; return () => { ativa.current = false; }; }, []);
 
     useEffect(() => {
         const controller = new AbortController();
+        setResultado(null);
         api(`/ocorrencia/api/v1/${id}`, { signal: controller.signal })
             .then(async (resposta) => {
-                if (resposta.status === 404) return setResultado({ id, naoEncontrada: true });
+                if (resposta.status === 404) { if (!controller.signal.aborted) setResultado({ id, naoEncontrada: true }); return; }
                 if (!resposta.ok) throw new Error();
-                setResultado({ id, ocorrencia: await resposta.json() });
+                const ocorrencia = await resposta.json();
+                if (!controller.signal.aborted) setResultado({ id, ocorrencia });
             })
             .catch((error) => {
-                if (error.name !== "AbortError") setResultado({ id, erro: true });
+                if (!controller.signal.aborted) setResultado({ id, erro: true });
             });
         return () => controller.abort();
-    }, [api, id]);
+    }, [api, id, tentativa]);
 
     async function mudarStatus(novoStatus, mensagemDeSucesso) {
-        if (enviando) return;
+        if (pendente.current) return;
+        pendente.current = true;
         setEnviando(true);
         try {
             const resposta = await api(`/ocorrencia/api/v1/${id}/status`, {
@@ -41,13 +52,27 @@ export function DetalheOcorrencia() {
             });
             if (resposta.status === 401) return; // o useApi já desloga e manda para o login
             const corpo = await resposta.json().catch(() => ({}));
+            if (!ativa.current) return;
+            if (resposta.status === 409) {
+                toaster.create({ title: corpo.message ?? "O estado da ocorrência mudou.", type: "info" });
+                setResultado(null);
+                try {
+                    const atual = await api(`/ocorrencia/api/v1/${id}`);
+                    if (atual.status === 404) { if (ativa.current) setResultado({ id, naoEncontrada: true }); return; }
+                    if (!atual.ok) throw new Error();
+                    const ocorrencia = await atual.json();
+                    if (ativa.current) setResultado({ id, ocorrencia });
+                } catch { if (ativa.current) setResultado({ id, erro: true }); }
+                return;
+            }
             if (!resposta.ok) throw new Error(corpo.message ?? "Tente novamente.");
             setResultado({ id, ocorrencia: corpo });
             toaster.create({ title: mensagemDeSucesso, type: "success" });
         } catch (error) {
-            toaster.create({ title: "Não foi possível atualizar a ocorrência", description: error.message, type: "error" });
+            if (ativa.current) toaster.create({ title: "Não foi possível atualizar a ocorrência", description: error.message, type: "error" });
         } finally {
-            setEnviando(false);
+            pendente.current = false;
+            if (ativa.current) setEnviando(false);
         }
     }
 
@@ -63,6 +88,7 @@ export function DetalheOcorrencia() {
         return (
             <Stack align="center" py="10">
                 <Text>{resultado.naoEncontrada ? "Ocorrência não encontrada." : "Não foi possível carregar a ocorrência."}</Text>
+                {resultado.erro && <Button onClick={() => setTentativa((n) => n + 1)}>Tentar novamente: ocorrência</Button>}
                 <Button variant="outline" onClick={() => navigate("/ocorrencias")}>Ver ocorrências</Button>
             </Stack>
         );
@@ -71,7 +97,7 @@ export function DetalheOcorrencia() {
     const o = resultado.ocorrencia;
     const status = STATUS[o.status];
     const acoes = acoesPermitidas(o, usuario);
-    const quem = (idPessoa, perfil) => (idPessoa === usuario.id ? "Você" : perfil === "ONG" ? "Uma ONG" : "Um cidadão");
+    const quem = (idPessoa, perfil) => (idPessoa === usuario.id && perfil === usuario.perfil ? "Você" : perfil === "ONG" ? "Uma ONG" : "Um cidadão");
     const linha = (rotulo, valor) => valor && (
         <Text><Text as="span" fontWeight="medium">{rotulo}:</Text> {valor}</Text>
     );
@@ -107,7 +133,8 @@ export function DetalheOcorrencia() {
                 </Card.Body>
                 <Card.Footer colorPalette="orange" justifyContent="space-between" flexWrap="wrap" gap="2">
                     <Button variant="outline" onClick={() => navigate(-1)} disabled={enviando}>Voltar</Button>
-                    <HStack>
+                    <HStack flexWrap="wrap">
+                        {podeEditar(o, usuario) && <Button disabled={enviando} onClick={() => navigate(`/ocorrencias/${o.id}/editar`)}>Editar</Button>}
                         {acoes.assumir && (
                             <Button colorPalette="purple" disabled={enviando}
                                 onClick={() => mudarStatus("EM_ANDAMENTO", "Você assumiu a ocorrência. Obrigado por ajudar!")}>

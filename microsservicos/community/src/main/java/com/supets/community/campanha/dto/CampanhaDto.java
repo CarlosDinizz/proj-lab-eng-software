@@ -16,7 +16,7 @@ public record CampanhaDto(
     @NotBlank(message = "Informe o CEP.") @Pattern(regexp = "[0-9]{8}", message = "O CEP deve ter 8 dígitos.") String cep,
     @NotBlank(message = "Informe o endereço.") @Size(max = 255, message = "Use no máximo 255 caracteres.") String endereco,
     @NotBlank(message = "Informe a cidade.") @Size(max = 255, message = "Use no máximo 255 caracteres.") String cidade,
-    @NotBlank(message = "Selecione o estado.") @Pattern(regexp = "[A-Z]{2}", message = "O estado deve ter 2 letras.") String estado
+    @NotBlank(message = "Informe uma UF válida.") @Pattern(regexp = "[A-Z]{2}", message = "Informe uma UF válida.") String estado
 ) {
     public CampanhaDto {
         if (titulo != null) titulo = titulo.trim();

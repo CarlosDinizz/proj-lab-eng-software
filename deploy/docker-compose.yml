@@ -1,35 +1,236 @@
-# Bancos de produção (um por serviço). Subir com:
-#   docker compose --env-file /etc/supets/supets.env -f deploy/docker-compose.yml up -d
-# As portas ficam só em localhost: quem acessa o banco são os serviços da própria máquina.
-name: supets
+name: ${COMPOSE_PROJECT_NAME:?Defina COMPOSE_PROJECT_NAME pelo launcher}
+
+x-labels: &labels
+    com.supets.managed: "true"
+    com.supets.project: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
+
+x-logging: &logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "3"
+
+x-java: &java
+    platform: ${SUPETS_PLATFORM:?Defina SUPETS_PLATFORM}
+    restart: unless-stopped
+    labels: *labels
+    user: "10001:10001"
+    read_only: true
+    tmpfs:
+        - /tmp:rw,noexec,nosuid,size=128m,uid=10001,gid=10001,mode=1770
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    stop_grace_period: 35s
+    logging: *logging
+
+x-java-environment: &java-environment
+    JAVA_TOOL_OPTIONS: "-Xms64m -Xmx384m"
+    SERVER_ADDRESS: 0.0.0.0
+    SERVER_SHUTDOWN: graceful
+    SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: 30s
+
+x-datasource-environment: &datasource-environment
+    SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+    SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: "1"
+    SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: "2000"
+    SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT: "1000"
+    SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+    SPRING_SQL_INIT_MODE: never
+
+x-postgres: &postgres
+    image: ${POSTGRES_IMAGE:?Defina POSTGRES_IMAGE}
+    platform: ${SUPETS_PLATFORM:?Defina SUPETS_PLATFORM}
+    restart: unless-stopped
+    labels: *labels
+    read_only: true
+    tmpfs:
+        - /tmp:rw,noexec,nosuid,size=32m
+        - /var/run/postgresql:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    stop_grace_period: 35s
+    logging: *logging
+    healthcheck:
+        test:
+            - CMD-SHELL
+            - >-
+              PGPASSWORD="$$POSTGRES_PASSWORD" PGCONNECT_TIMEOUT=2
+              PGOPTIONS='-c statement_timeout=1000'
+              psql --no-psqlrc -h 127.0.0.1 -U "$$POSTGRES_USER"
+              -d "$$POSTGRES_DB" -v ON_ERROR_STOP=1 -tAc 'SELECT 1' | grep -qx 1
+        interval: 5s
+        timeout: 4s
+        retries: 20
+        start_period: 15s
 
 services:
-    community_db:
-        container_name: community_db
-        image: postgres:16-alpine3.23
-        restart: always
+    web:
+        image: ${WEB_IMAGE:?Defina WEB_IMAGE}
+        platform: ${SUPETS_PLATFORM:?Defina SUPETS_PLATFORM}
+        restart: unless-stopped
+        labels: *labels
+        read_only: true
+        tmpfs:
+            - /tmp:rw,noexec,nosuid,size=16m
+        cap_drop: [ALL]
+        cap_add: [NET_BIND_SERVICE]
+        security_opt: [no-new-privileges:true]
+        mem_limit: 128m
+        stop_grace_period: 35s
+        logging: *logging
         environment:
-            POSTGRES_USER: ${PG_USER:?defina PG_USER em /etc/supets/supets.env}
-            POSTGRES_PASSWORD: ${PG_PASSWORD:?defina PG_PASSWORD em /etc/supets/supets.env}
-            POSTGRES_DB: community
+            WEB_MODE: ${WEB_MODE:?Defina WEB_MODE}
+            CADDY_SITE_MODE: local
+            SITE_ADDRESS: ${SITE_ADDRESS:?Defina SITE_ADDRESS}
+            ACME_EMAIL: ${ACME_EMAIL:-}
+            ACME_CA: ${ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
+            JENKINS_WEBHOOK_ENABLED: ${JENKINS_WEBHOOK_ENABLED:-false}
         ports:
-            - "127.0.0.1:5431:5432"
+            - "127.0.0.1:${SUPETS_PORT:-8180}:8080"
         volumes:
-            - community_data:/var/lib/postgresql/data
+            - caddy-data:/data
+            - caddy-config:/config
+            - asset-history:/srv/history:ro
+        networks:
+            - front
+            - jenkins
+        healthcheck:
+            test: [CMD, wget, -q, -T, "2", -O, /dev/null, "http://127.0.0.1:8085/health"]
+            interval: 5s
+            timeout: 3s
+            retries: 20
+            start_period: 5s
 
-    ocorrencias_db:
-        container_name: ocorrencias_db
-        image: postgres:16-alpine3.23
-        restart: always
+    gateway:
+        <<: *java
+        image: ${GATEWAY_IMAGE:?Defina GATEWAY_IMAGE}
         environment:
-            POSTGRES_USER: ${PG_USER:?defina PG_USER em /etc/supets/supets.env}
-            POSTGRES_PASSWORD: ${PG_PASSWORD:?defina PG_PASSWORD em /etc/supets/supets.env}
-            POSTGRES_DB: ocorrencias
-        ports:
-            - "127.0.0.1:5432:5432"
+            <<: *java-environment
+            SERVER_PORT: "8081"
+            COMMUNITY_URL: http://community:8083
+            OCORRENCIAS_URL: http://ocorrencias:8082
+            JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET}
+        depends_on:
+            community:
+                condition: service_healthy
+            ocorrencias:
+                condition: service_healthy
+        networks:
+            - front
+            - services
+        healthcheck:
+            test: [CMD, curl, --fail, --silent, --show-error, --max-time, "5", "http://127.0.0.1:8081/api/ready"]
+            interval: 5s
+            timeout: 6s
+            retries: 24
+            start_period: 30s
+
+    community:
+        <<: *java
+        image: ${COMMUNITY_IMAGE:?Defina COMMUNITY_IMAGE}
+        environment:
+            <<: [*java-environment, *datasource-environment]
+            SERVER_PORT: "8083"
+            SPRING_DATASOURCE_URL: jdbc:postgresql://community-db:5432/community
+            SPRING_DATASOURCE_USERNAME: community_app
+            SPRING_DATASOURCE_PASSWORD: ${COMMUNITY_DB_PASSWORD:?Defina COMMUNITY_DB_PASSWORD}
+            # Preserve community's existing Flyway-only schema management:
+            # unused legacy Local mappings do not match the historical schema.
+            SPRING_JPA_HIBERNATE_DDL_AUTO: none
+            JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET}
+        depends_on:
+            community-db:
+                condition: service_healthy
+        networks:
+            - services
+            - community-data
+        healthcheck:
+            test: [CMD, curl, --fail, --silent, --show-error, --max-time, "3", "http://127.0.0.1:8083/community/internal/ready"]
+            interval: 5s
+            timeout: 4s
+            retries: 24
+            start_period: 30s
+
+    ocorrencias:
+        <<: *java
+        image: ${OCORRENCIAS_IMAGE:?Defina OCORRENCIAS_IMAGE}
+        environment:
+            <<: [*java-environment, *datasource-environment]
+            SERVER_PORT: "8082"
+            SPRING_DATASOURCE_URL: jdbc:postgresql://ocorrencias-db:5432/ocorrencias
+            SPRING_DATASOURCE_USERNAME: ocorrencias_app
+            SPRING_DATASOURCE_PASSWORD: ${OCORRENCIAS_DB_PASSWORD:?Defina OCORRENCIAS_DB_PASSWORD}
+        depends_on:
+            ocorrencias-db:
+                condition: service_healthy
+        networks:
+            - services
+            - ocorrencias-data
+        healthcheck:
+            test: [CMD, curl, --fail, --silent, --show-error, --max-time, "3", "http://127.0.0.1:8082/internal/ready"]
+            interval: 5s
+            timeout: 4s
+            retries: 24
+            start_period: 30s
+
+    community-db:
+        <<: *postgres
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: ${COMMUNITY_DB_ADMIN_PASSWORD:?Defina COMMUNITY_DB_ADMIN_PASSWORD}
+            POSTGRES_DB: community
+            POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+            APP_USER: community_app
+            APP_PASSWORD: ${COMMUNITY_DB_PASSWORD:?Defina COMMUNITY_DB_PASSWORD}
+            APP_DB: community
+            TEST_DATABASE: "false"
         volumes:
-            - ocorrencias_data:/var/lib/postgresql/data
+            - community-data:/var/lib/postgresql/data
+        networks:
+            - community-data
+
+    ocorrencias-db:
+        <<: *postgres
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: ${OCORRENCIAS_DB_ADMIN_PASSWORD:?Defina OCORRENCIAS_DB_ADMIN_PASSWORD}
+            POSTGRES_DB: ocorrencias
+            POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+            APP_USER: ocorrencias_app
+            APP_PASSWORD: ${OCORRENCIAS_DB_PASSWORD:?Defina OCORRENCIAS_DB_PASSWORD}
+            APP_DB: ocorrencias
+            TEST_DATABASE: "false"
+        volumes:
+            - ocorrencias-data:/var/lib/postgresql/data
+        networks:
+            - ocorrencias-data
+
+networks:
+    front:
+        labels: *labels
+    jenkins:
+        labels: *labels
+    services:
+        internal: true
+        labels: *labels
+    community-data:
+        internal: true
+        labels: *labels
+    ocorrencias-data:
+        internal: true
+        labels: *labels
 
 volumes:
-    community_data:
-    ocorrencias_data:
+    community-data:
+        labels: *labels
+    ocorrencias-data:
+        labels: *labels
+    caddy-data:
+        labels: *labels
+    caddy-config:
+        labels: *labels
+    asset-history:
+        labels: *labels

@@ -1,0 +1,18 @@
+import /etc/caddy/common.Caddyfile
+import /etc/caddy/{$CADDY_SITE_MODE:local}.Caddyfile
+
+{$SITE_ADDRESS:http://:8080} {
+    import supets_site_options
+    import supets_headers
+    import supets_errors
+
+    route {
+        import supets_webhook
+        handle {
+            header Content-Type application/json
+            header Cache-Control no-store
+            header Retry-After 30
+            respond `{"message":"SuPets em manutenção. Tente novamente em instantes."}` 503
+        }
+    }
+}

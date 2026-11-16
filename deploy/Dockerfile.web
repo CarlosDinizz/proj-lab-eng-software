@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+FROM node:22.22.1-bookworm-slim@sha256:4f77a690f2f8946ab16fe1e791a3ac0667ae1c3575c3e4d0d4589e9ed5bfaf3d AS build
+WORKDIR /workspace/frontend/supets
+COPY frontend/supets/package.json frontend/supets/package-lock.json ./
+RUN npm ci
+COPY frontend/supets/ ./
+COPY shared/data/ /workspace/shared/data/
+RUN npm run build
+
+FROM caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 AS runtime
+COPY --from=build /workspace/frontend/supets/dist/ /srv/
+COPY deploy/caddy/ /etc/caddy/
+RUN mkdir -p /srv/history
+ENV WEB_MODE=maintenance CADDY_SITE_MODE=local SITE_ADDRESS=http://:8080 JENKINS_WEBHOOK_ENABLED=false
+EXPOSE 8080 8085 80 443
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["/bin/sh", "-ec", "case \"$WEB_MODE\" in normal|maintenance) ;; *) echo >&2 'Invalid web mode'; exit 1 ;; esac; case \"$CADDY_SITE_MODE\" in local|cloud) ;; *) echo >&2 'Invalid site mode'; exit 1 ;; esac; if [ \"$CADDY_SITE_MODE\" = cloud ]; then export CADDY_DEFAULT_SNI=\"${SITE_ADDRESS#https://}\"; fi; exec caddy run --config \"/etc/caddy/$WEB_MODE.Caddyfile\" --adapter caddyfile"]
+CMD []

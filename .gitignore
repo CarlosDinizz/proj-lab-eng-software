@@ -20,3 +20,11 @@ bin/
 
 # Segredos
 .env
+.env.*
+!.env.example
+.supets/
+*.pem
+*.key
+*.log
+node_modules/
+dist/

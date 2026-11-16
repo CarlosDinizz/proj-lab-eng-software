@@ -7,22 +7,23 @@ import com.supets.ocorrencias.ocorrencia.model.*;
 import com.supets.ocorrencias.ocorrencia.repository.*;
 import com.supets.ocorrencias.ocorrencia.service.Distancia;
 import com.supets.ocorrencias.ocorrencia.service.OcorrenciaService;
+import com.supets.ocorrencias.ocorrencia.enums.PerfilEnum;
+import com.supets.ocorrencias.ocorrencia.validation.Enderecos;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 @Service
 public class OcorrenciaServiceImpl implements OcorrenciaService {
     private static final double RAIO_PADRAO_KM = 10;
     private static final double RAIO_MAXIMO_KM = 500;
-    private static final double KM_POR_GRAU = 111.32;
 
     private final OcorrenciaRepository repository;
     private final TipoOcorrenciaRepository tipos;
@@ -41,43 +42,77 @@ public class OcorrenciaServiceImpl implements OcorrenciaService {
 
     @Override
     @Transactional
-    public OcorrenciaRespostaDto criar(UsuarioAutenticado autor, CriarOcorrenciaDto dados) {
+    public OcorrenciaRespostaDto criar(UsuarioAutenticado autor, DadosOcorrenciaDto dados) {
+        exigirCidadao(autor);
+        Ocorrencia o = new Ocorrencia();
+        o.setCidadaoId(autor.id());
+        o.setStatus(StatusOcorrencia.ABERTA);
+        o.setCreatedAt(Instant.now().truncatedTo(ChronoUnit.MICROS));
+        o.setAnimal(new Animal());
+        preencher(o, dados);
+        return OcorrenciaRespostaDto.de(repository.save(o));
+    }
+
+    @Override
+    @Transactional
+    public OcorrenciaRespostaDto atualizar(UUID id, UsuarioAutenticado usuario, DadosOcorrenciaDto dados) {
+        exigirCidadao(usuario);
+        Ocorrencia o = encontrarParaAtualizar(id);
+        if (!usuario.id().equals(o.getCidadaoId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Apenas quem registrou pode editar a ocorrência.");
+        }
+        if (o.getStatus() != StatusOcorrencia.ABERTA) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta ocorrência não pode mais ser editada.");
+        }
+        preencher(o, dados);
+        return OcorrenciaRespostaDto.de(repository.save(o));
+    }
+
+    private static void exigirCidadao(UsuarioAutenticado usuario) {
+        if (usuario == null || usuario.id() == null || usuario.perfil() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Faça login para continuar.");
+        }
+        if (usuario.perfil() != PerfilEnum.CIDADAO) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Apenas cidadãos podem registrar ou editar ocorrências.");
+        }
+    }
+
+    private void preencher(Ocorrencia o, DadosOcorrenciaDto dados) {
+        validarCoordenadas(dados.lat(), dados.lon());
+        String uf = Enderecos.normalizarUf(dados.estado());
+        String cidade = Enderecos.cidadeCanonica(uf, dados.cidade(), "cidade");
         TipoOcorrencia tipo = tipos.findById(dados.tipoOcorrenciaId())
             .orElseThrow(TipoOcorrenciaNotFoundException::new);
-
-        Ocorrencia o = new Ocorrencia();
+        CriarAnimalDto dadosAnimal = dados.animal();
+        Especie especie = especies.findById(dadosAnimal.especieId())
+            .orElseThrow(() -> new OpcaoInvalidaException("animal.especieId", "Espécie não encontrada."));
+        SexoAnimal sexo = dadosAnimal.sexoId() == null ? null : sexos.findById(dadosAnimal.sexoId())
+            .orElseThrow(() -> new OpcaoInvalidaException("animal.sexoId", "Sexo não encontrado."));
+        Porte porte = dadosAnimal.porteId() == null ? null : portes.findById(dadosAnimal.porteId())
+            .orElseThrow(() -> new OpcaoInvalidaException("animal.porteId", "Porte não encontrado."));
         o.setTitulo(dados.titulo().trim());
         o.setDescricao(dados.descricao().trim());
         o.setDataOcorrido(dados.dataOcorrido());
         o.setTipoOcorrencia(tipo);
-        o.setCidadaoId(autor.id());
-        o.setStatus(StatusOcorrencia.ABERTA);
-        o.setCreatedAt(Instant.now());
         o.setCep(dados.cep().replace("-", ""));
         o.setEndereco(dados.endereco().trim());
-        o.setCidade(dados.cidade().trim());
-        o.setEstado(dados.estado().toUpperCase(Locale.ROOT));
+        o.setCidade(cidade);
+        o.setEstado(uf);
         o.setLat(dados.lat());
         o.setLon(dados.lon());
-        o.setAnimal(montarAnimal(dados.animal()));
-        return OcorrenciaRespostaDto.de(repository.save(o));
+        Animal animal = o.getAnimal();
+        animal.setNome(vazioViraNulo(dadosAnimal.nome()));
+        animal.setRaca(vazioViraNulo(dadosAnimal.raca()));
+        animal.setEspecie(especie);
+        animal.setSexo(sexo);
+        animal.setPorte(porte);
     }
 
-    private Animal montarAnimal(CriarAnimalDto dados) {
-        Animal animal = new Animal();
-        animal.setNome(vazioViraNulo(dados.nome()));
-        animal.setRaca(vazioViraNulo(dados.raca()));
-        animal.setEspecie(especies.findById(dados.especieId())
-            .orElseThrow(() -> new OpcaoInvalidaException("animal.especieId", "Espécie não encontrada.")));
-        if (dados.sexoId() != null) {
-            animal.setSexo(sexos.findById(dados.sexoId())
-                .orElseThrow(() -> new OpcaoInvalidaException("animal.sexoId", "Sexo não encontrado.")));
+    private static void validarCoordenadas(Double lat, Double lon) {
+        if (lat == null || lon == null || !Double.isFinite(lat) || !Double.isFinite(lon)
+                || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe lat e lon válidos, juntos.");
         }
-        if (dados.porteId() != null) {
-            animal.setPorte(portes.findById(dados.porteId())
-                .orElseThrow(() -> new OpcaoInvalidaException("animal.porteId", "Porte não encontrado.")));
-        }
-        return animal;
     }
 
     private static String vazioViraNulo(String texto) {
@@ -93,35 +128,46 @@ public class OcorrenciaServiceImpl implements OcorrenciaService {
     @Override
     @Transactional(readOnly = true)
     public List<OcorrenciaRespostaDto> listar(StatusOcorrencia status, Double lat, Double lon, Double raioKm) {
-        if (lat == null && lon == null) {
+        if (lat == null && lon == null && raioKm == null) {
             return (status == null ? repository.findAllByOrderByCreatedAtDesc() :
                 repository.findByStatusOrderByCreatedAtDesc(status)).stream().map(OcorrenciaRespostaDto::de).toList();
         }
-        if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Informe lat e lon válidos, juntos.");
-        }
+        validarCoordenadas(lat, lon);
         double raio = raioKm == null ? RAIO_PADRAO_KM : raioKm;
-        if (raio <= 0 || raio > RAIO_MAXIMO_KM) {
+        if (!Double.isFinite(raio) || raio <= 0 || raio > RAIO_MAXIMO_KM) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "O raio deve ficar entre 0 e 500 km.");
         }
-
-        // 1) O banco devolve só o "quadrado" em volta do ponto, para não carregar tudo.
-        double grausLat = raio / KM_POR_GRAU;
-        double grausLon = raio / (KM_POR_GRAU * Math.max(Math.cos(Math.toRadians(lat)), 0.01));
-        // 2) Aqui fica só quem está dentro do círculo, da mais próxima para a mais longe.
-        return repository.findByLatBetweenAndLonBetween(lat - grausLat, lat + grausLat, lon - grausLon, lon + grausLon)
-            .stream()
-            .filter(o -> status == null || o.getStatus() == status)
-            .filter(o -> Distancia.km(lat, lon, o.getLat(), o.getLon()) <= raio)
-            .sorted(Comparator.comparingDouble(o -> Distancia.km(lat, lon, o.getLat(), o.getLon())))
-            .map(OcorrenciaRespostaDto::de)
+        double delta = raio / Distancia.RAIO_TERRA_KM;
+        double latitude = Math.toRadians(lat);
+        double sul = Math.max(-Math.PI / 2, latitude - delta);
+        double norte = Math.min(Math.PI / 2, latitude + delta);
+        boolean todosLongitudes = sul <= -Math.PI / 2 || norte >= Math.PI / 2;
+        double largura = todosLongitudes ? 180 :
+            Math.toDegrees(Math.asin(Math.clamp(Math.sin(delta) / Math.cos(latitude), -1, 1)));
+        double oeste = normalizarLongitude(lon - largura);
+        double leste = normalizarLongitude(lon + largura);
+        return repository.buscarNaRegiao(status, Math.nextDown(Math.toDegrees(sul)),
+                Math.nextUp(Math.toDegrees(norte)), todosLongitudes, oeste > leste,
+                Math.nextDown(oeste), Math.nextUp(leste)).stream()
+            .map(o -> new OcorrenciaDistante(o, Distancia.km(lat, lon, o.getLat(), o.getLon())))
+            .filter(o -> o.km() <= raio)
+            .sorted(Comparator.comparingDouble(OcorrenciaDistante::km))
+            .map(o -> OcorrenciaRespostaDto.de(o.ocorrencia()))
             .toList();
+    }
+
+    private record OcorrenciaDistante(Ocorrencia ocorrencia, double km) {}
+
+    private static double normalizarLongitude(double longitude) {
+        if (longitude < -180) return longitude + 360;
+        if (longitude >= 180) return longitude - 360;
+        return longitude;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<OcorrenciaRespostaDto> listarMinhas(UsuarioAutenticado usuario) {
-        return repository.findByCidadaoIdOrResponsavelIdOrderByCreatedAtDesc(usuario.id(), usuario.id())
+        return repository.buscarMinhas(usuario.id(), usuario.perfil())
             .stream().map(OcorrenciaRespostaDto::de).toList();
     }
 
@@ -136,12 +182,12 @@ public class OcorrenciaServiceImpl implements OcorrenciaService {
     @Override
     @Transactional
     public OcorrenciaRespostaDto atualizarStatus(UUID id, UsuarioAutenticado usuario, AtualizarStatusDto dados) {
-        Ocorrencia o = repository.findByIdForUpdate(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ocorrência não encontrada."));
+        Ocorrencia o = encontrarParaAtualizar(id);
         StatusOcorrencia de = o.getStatus();
         StatusOcorrencia para = dados.status();
-        boolean ehAutor = usuario.id().equals(o.getCidadaoId());
-        boolean ehResponsavel = usuario.id().equals(o.getResponsavelId());
+        boolean ehAutor = usuario.perfil() == PerfilEnum.CIDADAO && usuario.id().equals(o.getCidadaoId());
+        boolean ehResponsavel = usuario.id().equals(o.getResponsavelId())
+            && usuario.perfil() == o.getResponsavelPerfil();
 
         if (de == StatusOcorrencia.ABERTA && para == StatusOcorrencia.EM_ANDAMENTO) {
             o.setResponsavelId(usuario.id());
@@ -181,6 +227,11 @@ public class OcorrenciaServiceImpl implements OcorrenciaService {
     public List<SexoAnimal> listarSexos() {
         return sexos.findAll(Sort.by("id"));
     }
+    private Ocorrencia encontrarParaAtualizar(UUID id) {
+        return repository.findByIdForUpdate(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ocorrência não encontrada."));
+    }
+
 
     private Ocorrencia encontrar(UUID id) {
         return repository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ocorrência não encontrada."));

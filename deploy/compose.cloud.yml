@@ -1,0 +1,10 @@
+services:
+    web:
+        ports: !override
+            - "80:80"
+            - "443:443"
+        environment:
+            CADDY_SITE_MODE: cloud
+            SITE_ADDRESS: ${SITE_ADDRESS:?Defina https:// seguido pelo IPv4 atribuído}
+            ACME_EMAIL: ${ACME_EMAIL:?Defina o contato ACME}
+            ACME_CA: ${ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}

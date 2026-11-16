@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Badge, Button, Field, Flex, HStack, Input, NativeSelect, Spinner, Stack, Table, Text } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useApi } from "@/auth/useApi";
 import { useAuth } from "@/auth/useAuth";
 import { Layout } from "@/components/layout/Layout";
-import { ESTADOS, formatarData } from "@/components/ocorrencia/ocorrencias";
+import { formatarData } from "@/components/ocorrencia/ocorrencias";
+import { ESTADOS } from "@/shared/endereco";
+import { useRecurso } from "@/shared/useRecurso";
 import { LISTAS, filtrarCampanhas, situacao } from "./campanhas";
 
 export function ListaCampanhas({ lista = "todas" }) {
@@ -13,24 +15,9 @@ export function ListaCampanhas({ lista = "todas" }) {
     const { usuario } = useAuth();
     const { titulo, caminho, vazia } = LISTAS[lista];
     const [filtro, setFiltro] = useState({ busca: "", estado: "", cidade: "" });
-    const [resultado, setResultado] = useState(null);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        api(caminho, { signal: controller.signal })
-            .then((resposta) => {
-                if (!resposta.ok) throw new Error();
-                return resposta.json();
-            })
-            .then((campanhas) => setResultado({ caminho, campanhas }))
-            .catch((error) => {
-                if (error.name !== "AbortError") setResultado({ caminho, erro: true });
-            });
-        return () => controller.abort();
-    }, [api, caminho]);
-
-    const carregando = resultado?.caminho !== caminho;
-    const todas = resultado?.campanhas ?? [];
+    const recurso = useRecurso(api, caminho);
+    const carregando = recurso.status === "loading";
+    const todas = recurso.dados ?? [];
     const campanhas = filtrarCampanhas(todas, filtro);
     const mudarFiltro = (event) => setFiltro((anterior) => ({ ...anterior, [event.target.name]: event.target.value }));
 
@@ -83,9 +70,10 @@ export function ListaCampanhas({ lista = "todas" }) {
                         <Text>Carregando campanhas...</Text>
                     </Flex>
                 )}
-                {!carregando && resultado.erro && <Text>Não foi possível carregar as campanhas.</Text>}
-                {!carregando && !resultado.erro && todas.length === 0 && <Text>{vazia}</Text>}
-                {!carregando && !resultado.erro && todas.length > 0 && (
+                {recurso.status === "error" && <Stack role="alert"><Text>Não foi possível carregar as campanhas.</Text><Button onClick={recurso.recarregar}>Tentar novamente: campanhas</Button></Stack>}
+                {recurso.status === "not-found" && <Text>Lista de campanhas não encontrada.</Text>}
+                {recurso.status === "ready" && todas.length === 0 && <Text>{vazia}</Text>}
+                {recurso.status === "ready" && todas.length > 0 && (
                     <>
                         <Table.ScrollArea borderWidth="1px" rounded="md">
                             <Table.Root size="sm" interactive>

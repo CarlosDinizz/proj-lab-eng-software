@@ -30,9 +30,11 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
     private static final Set<String> PERFIS = Set.of("CIDADAO", "ONG");
 
     private final JwtDecoder decoder;
+    private final LimiteAutenticacao limite;
 
-    public AutenticacaoFilter(JwtDecoder decoder) {
+    public AutenticacaoFilter(JwtDecoder decoder, LimiteAutenticacao limite) {
         this.decoder = decoder;
+        this.limite = limite;
     }
 
     @Override
@@ -42,6 +44,18 @@ public class AutenticacaoFilter extends OncePerRequestFilter {
         if (caminhoSuspeito(caminho)) {
             responder(response, HttpServletResponse.SC_BAD_REQUEST, "caminho", "Caminho inválido.");
             return;
+        }
+        if (caminho.equals("/community/internal") || caminho.startsWith("/community/internal/")) {
+            responder(response, HttpServletResponse.SC_NOT_FOUND, "message", "Recurso não encontrado.");
+            return;
+        }
+        if (limite.aplica(request.getMethod(), caminho)) {
+            long espera = limite.verificar(request.getHeader("X-SuPets-Client-IP"), request.getMethod(), caminho);
+            if (espera > 0) {
+                response.setHeader("Retry-After", Long.toString(espera));
+                responder(response, 429, "message", "Muitas tentativas. Aguarde um minuto e tente novamente.");
+                return;
+            }
         }
 
         Map<String, String> usuario = new LinkedHashMap<>();

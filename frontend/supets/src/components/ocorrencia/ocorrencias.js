@@ -2,10 +2,7 @@
  * Regras das telas de ocorrência (UC001, UC002, UC003), separadas do visual para poderem ser testadas.
  */
 
-export const ESTADOS = [
-    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
-    "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
-];
+import { ufValida } from "../../shared/endereco.js";
 
 /** Centro do mapa quando ainda não sabemos onde a pessoa está (Praça da Sé, São Paulo). */
 export const CENTRO_PADRAO = { lat: -23.5505, lon: -46.6333 };
@@ -57,7 +54,8 @@ export function validar(valores, dataDeHoje = hoje()) {
     // As datas aaaa-mm-dd podem ser comparadas como texto
     if (valores.dataOcorrido && valores.dataOcorrido > dataDeHoje) erros.dataOcorrido = "A data não pode estar no futuro.";
     if (valores.cep && valores.cep.replace(/\D/g, "").length !== 8) erros.cep = "O CEP deve ter 8 dígitos.";
-    if (valores.lat == null || valores.lon == null) erros.lat = "Clique no mapa para marcar onde o animal está.";
+    if (!ufValida(valores.estado)) erros.estado = "Informe uma UF válida.";
+    if (!pontoValido(valores)) erros.lat = "Informe latitude entre -90 e 90 e longitude entre -180 e 180.";
     return erros;
 }
 
@@ -107,8 +105,8 @@ export function errosDoBack(corpo) {
  */
 export function acoesPermitidas(ocorrencia, usuario) {
     if (!ocorrencia || !usuario) return { assumir: false, resolver: false };
-    const ehAutor = ocorrencia.cidadaoId === usuario.id;
-    const ehResponsavel = ocorrencia.responsavelId === usuario.id;
+    const ehAutor = usuario.perfil === "CIDADAO" && ocorrencia.cidadaoId === usuario.id;
+    const ehResponsavel = ocorrencia.responsavelId === usuario.id && ocorrencia.responsavelPerfil === usuario.perfil;
     return {
         assumir: ocorrencia.status === "ABERTA",
         resolver: (ocorrencia.status === "EM_ANDAMENTO" && (ehAutor || ehResponsavel))
@@ -122,7 +120,7 @@ export function distanciaKm(a, b) {
     const dLat = rad(b.lat - a.lat);
     const dLon = rad(b.lon - a.lon);
     const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
-    return 2 * 6371 * Math.asin(Math.sqrt(h));
+    return 2 * 6371 * Math.asin(Math.sqrt(Math.max(0, Math.min(1, h))));
 }
 
 export function formatarDistancia(km) {
@@ -148,4 +146,27 @@ export function caminhoDaLista({ minhas, status, local, raioKm }) {
     }
     const busca = params.toString();
     return busca ? `/ocorrencia/api/v1?${busca}` : "/ocorrencia/api/v1";
+}
+
+export function pontoValido({ lat, lon }) {
+    return typeof lat === "number" && Number.isFinite(lat) && Math.abs(lat) <= 90
+        && typeof lon === "number" && Number.isFinite(lon) && Math.abs(lon) <= 180;
+}
+
+export function podeEditar(ocorrencia, usuario) {
+    return Boolean(ocorrencia?.status === "ABERTA" && usuario?.perfil === "CIDADAO" && ocorrencia.cidadaoId === usuario.id);
+}
+
+export function valoresDe(ocorrencia) {
+    const animal = ocorrencia.animal ?? {};
+    const id = (valor) => valor == null ? "" : String(valor);
+    return {
+        titulo: ocorrencia.titulo ?? "", descricao: ocorrencia.descricao ?? "",
+        dataOcorrido: ocorrencia.dataOcorrido ?? "", tipoOcorrenciaId: id(ocorrencia.tipoOcorrenciaId),
+        cep: formatarCep(ocorrencia.cep ?? ""), endereco: ocorrencia.endereco ?? "",
+        cidade: ocorrencia.cidade ?? "", estado: ocorrencia.estado ?? "",
+        lat: ocorrencia.lat ?? null, lon: ocorrencia.lon ?? null,
+        nomeAnimal: animal.nome ?? "", especieId: id(animal.especieId),
+        sexoId: id(animal.sexoId), raca: animal.raca ?? "", porteId: id(animal.porteId),
+    };
 }

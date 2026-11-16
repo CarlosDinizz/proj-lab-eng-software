@@ -6,7 +6,8 @@ export function criarApi({ token, aoSessaoInvalida, fetchImpl = fetch }) {
     return async function api(caminho, opcoes = {}) {
         const headers = new Headers(opcoes.headers);
         // O token só acompanha caminhos internos ("/..."), nunca um endereço de outro site.
-        const interno = typeof caminho === "string" && caminho.startsWith("/") && !caminho.startsWith("//");
+        const interno = typeof caminho === "string" && caminho.startsWith("/") && !caminho.startsWith("//")
+            && !/[\\\u0000-\u0020\u007f]/.test(caminho);
         const autenticada = Boolean(token) && interno;
         if (autenticada) headers.set("Authorization", `Bearer ${token}`);
 

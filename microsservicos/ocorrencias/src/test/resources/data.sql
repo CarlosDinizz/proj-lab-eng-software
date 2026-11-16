@@ -1,6 +1,7 @@
 INSERT INTO tipo_ocorrencia (id, tipo) VALUES (1, 'Animal Abandonado');
 INSERT INTO tipo_ocorrencia (id, tipo) VALUES (2, 'Animal em Apuros');
-INSERT INTO tipo_ocorrencia (id, tipo) VALUES (3, 'Animal em Necessidade de Assitência Médica');
+INSERT INTO tipo_ocorrencia (id, tipo) VALUES (3, 'Animal em Necessidade de Assistência Médica');
+INSERT INTO tipo_ocorrencia (id, tipo) VALUES (4, 'Desaparecimento');
 INSERT INTO especie (id, nome) VALUES (1, 'Cachorro');
 INSERT INTO especie (id, nome) VALUES (2, 'Gato');
 INSERT INTO especie (id, nome) VALUES (3, 'Ave');

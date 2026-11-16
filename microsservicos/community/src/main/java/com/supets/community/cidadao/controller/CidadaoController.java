@@ -2,6 +2,8 @@ package com.supets.community.cidadao.controller;
 
 import com.supets.community.cidadao.dto.CidadaoDto;
 import com.supets.community.cidadao.service.CidadaoService;
+import com.supets.community.shared.dto.PerfilRespostaDto;
+import com.supets.community.shared.dto.UsuarioAutenticado;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +24,10 @@ public class CidadaoController {
     }
 
     @GetMapping("/api/v1/{id}")
-    public ResponseEntity<String> getCidadao(@PathVariable Integer id) {
+    public ResponseEntity<PerfilRespostaDto> getCidadao(@PathVariable UUID id,
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_ID, required = false) String usuarioId,
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_PERFIL, required = false) String perfil) {
+        UsuarioAutenticado.de(usuarioId, perfil);
         return ResponseEntity.ok(service.getCidadao(id));
     }
 }

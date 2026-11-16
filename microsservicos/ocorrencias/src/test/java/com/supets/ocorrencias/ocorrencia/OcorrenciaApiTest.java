@@ -1,6 +1,9 @@
 package com.supets.ocorrencias.ocorrencia;
 
+import com.supets.ocorrencias.H2TestBase;
 import com.supets.ocorrencias.ocorrencia.repository.OcorrenciaRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-class OcorrenciaApiTest {
+class OcorrenciaApiTest extends H2TestBase {
     private static final String API = "/ocorrencia/api/v1";
     private static final String CIDADAO = "c4598d1a-e75c-4eee-961d-373dbcbdb3b0";
     private static final String OUTRO_CIDADAO = "0b6f3c52-7d0e-4c1b-9a53-2f4e8d1c6a77";
@@ -29,6 +32,7 @@ class OcorrenciaApiTest {
     private static final double[] SANTOS = {-23.9608, -46.3336};
     @Autowired MockMvc mvc;
     @Autowired OcorrenciaRepository repository;
+    @Autowired JdbcTemplate jdbc;
 
     @BeforeEach void limpar() { repository.deleteAll(); }
 
@@ -123,7 +127,9 @@ class OcorrenciaApiTest {
 
     @Test void listasDeOpcoesDoFormulario() throws Exception {
         mvc.perform(get(API + "/tipos")).andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(3))).andExpect(jsonPath("$[0].tipo").value("Animal Abandonado"));
+            .andExpect(jsonPath("$", hasSize(4))).andExpect(jsonPath("$[0].tipo").value("Animal Abandonado"))
+            .andExpect(jsonPath("$[2].tipo").value("Animal em Necessidade de Assistência Médica"))
+            .andExpect(jsonPath("$[3].tipo").value("Desaparecimento"));
         mvc.perform(get(API + "/especies")).andExpect(status().isOk())
             .andExpect(jsonPath("$", hasSize(4))).andExpect(jsonPath("$[0].nome").value("Cachorro"));
         mvc.perform(get(API + "/portes")).andExpect(status().isOk())
@@ -224,5 +230,149 @@ class OcorrenciaApiTest {
             .andExpect(jsonPath("$", hasSize(2)))
             .andExpect(jsonPath("$[*].id", containsInAnyOrder(registrada, outra)));
         mvc.perform(como(ONG, "ONG", get(API + "/minhas"))).andExpect(jsonPath("$", hasSize(0)));
+    }
+    @Test void ongNaoCriaNemAnimalEPerfilFazParteDaIdentidade() throws Exception {
+        long animais = jdbc.queryForObject("select count(*) from animal", Long.class);
+        mvc.perform(como(ONG, "ONG", post(API)).contentType(MediaType.APPLICATION_JSON).content(dados(1, "ONG")))
+            .andExpect(status().isForbidden());
+        assertEquals(0, repository.count());
+        assertEquals(animais, jdbc.queryForObject("select count(*) from animal", Long.class));
+        String id = criar("Identidade");
+        mvc.perform(como(CIDADAO, "ONG", mudarStatus(id, "RESOLVIDA"))).andExpect(status().isForbidden());
+        mvc.perform(como(CIDADAO, "ONG", get(API + "/minhas"))).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(como(ONG, "ONG", mudarStatus(id, "EM_ANDAMENTO"))).andExpect(status().isOk());
+        mvc.perform(como(ONG, "CIDADAO", mudarStatus(id, "RESOLVIDA"))).andExpect(status().isForbidden());
+        mvc.perform(como(ONG, "CIDADAO", get(API + "/minhas"))).andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test void editaTodosOsCamposSemTrocarIdsOuMetadadosELimpaOpcionais() throws Exception {
+        String id = criar("Antes");
+        UUID uuid = UUID.fromString(id);
+        var anterior = repository.findById(uuid).orElseThrow();
+        UUID animal = anterior.getAnimal().getId();
+        var criadoEm = anterior.getCreatedAt();
+        String corpo = dados(2, "  Depois  ", MOEMA,
+            "{\"nome\":\"Novo\",\"especieId\":1,\"sexoId\":2,\"raca\":\"Nova raça\",\"porteId\":1}")
+            .replace("Precisa de ajuda", "Descrição editada").replace("04094-050", "11000-000")
+            .replace("Av. Ibirapuera, 3103", "Rua nova, 2").replace("São Paulo", "  santos  ")
+            .replace(LocalDate.now().minusDays(1).toString(), LocalDate.now().minusDays(2).toString())
+            .replace("\"lat\"", "\"id\":\"" + UUID.randomUUID() + "\",\"cidadaoId\":\"" + OUTRO_CIDADAO
+                + "\",\"status\":\"RESOLVIDA\",\"responsavelId\":\"" + ONG + "\",\"responsavelPerfil\":\"ONG\",\"lat\"");
+        mvc.perform(como(CIDADAO, "CIDADAO", put(API + "/" + id)).contentType(MediaType.APPLICATION_JSON).content(corpo))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.titulo").value("Depois")).andExpect(jsonPath("$.descricao").value("Descrição editada"))
+            .andExpect(jsonPath("$.dataOcorrido").value(LocalDate.now().minusDays(2).toString()))
+            .andExpect(jsonPath("$.tipoOcorrenciaId").value(2)).andExpect(jsonPath("$.cep").value("11000000"))
+            .andExpect(jsonPath("$.endereco").value("Rua nova, 2")).andExpect(jsonPath("$.cidade").value("Santos"))
+            .andExpect(jsonPath("$.estado").value("SP")).andExpect(jsonPath("$.lat").value(MOEMA[0]))
+            .andExpect(jsonPath("$.lon").value(MOEMA[1])).andExpect(jsonPath("$.animal.nome").value("Novo"))
+            .andExpect(jsonPath("$.animal.especieId").value(1)).andExpect(jsonPath("$.animal.sexoId").value(2))
+            .andExpect(jsonPath("$.animal.raca").value("Nova raça")).andExpect(jsonPath("$.animal.porteId").value(1));
+        mvc.perform(get(API + "/" + id)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.titulo").value("Depois")).andExpect(jsonPath("$.cidade").value("Santos"))
+            .andExpect(jsonPath("$.status").value("ABERTA")).andExpect(jsonPath("$.cidadaoId").value(CIDADAO))
+            .andExpect(jsonPath("$.responsavelId").value(nullValue())).andExpect(jsonPath("$.animal.nome").value("Novo"));
+        mvc.perform(como(CIDADAO, "CIDADAO", put(API + "/" + id)).contentType(MediaType.APPLICATION_JSON)
+                .content(dados(1, "Limpo", CENTRO_SP, "{\"especieId\":2,\"nome\":\"  \",\"raca\":null}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.animal.nome").value(nullValue()))
+            .andExpect(jsonPath("$.animal.raca").value(nullValue())).andExpect(jsonPath("$.animal.sexoId").value(nullValue()))
+            .andExpect(jsonPath("$.animal.porteId").value(nullValue()));
+        var salvo = repository.findById(uuid).orElseThrow();
+        assertEquals(animal, salvo.getAnimal().getId());
+        assertEquals(criadoEm, salvo.getCreatedAt());
+        assertEquals(CIDADAO, salvo.getCidadaoId().toString());
+        assertEquals("ABERTA", salvo.getStatus().name());
+        assertNull(salvo.getResponsavelId());
+        assertNull(salvo.getResponsavelPerfil());
+    }
+
+    @Test void edicaoExigeAutorCidadaoAbertaEValidaAntesDePersistir() throws Exception {
+        String id = criar("Preservada");
+        String url = API + "/" + id;
+        mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content(dados(1, "Sem identidade")))
+            .andExpect(status().isUnauthorized());
+        for (String[] identidade : new String[][]{{OUTRO_CIDADAO, "CIDADAO"}, {CIDADAO, "ONG"}, {ONG, "ONG"}}) {
+            mvc.perform(como(identidade[0], identidade[1], put(url)).contentType(MediaType.APPLICATION_JSON).content(dados(1, "Negada")))
+                .andExpect(status().isForbidden());
+        }
+        mvc.perform(como(CIDADAO, "CIDADAO", put(API + "/" + UUID.randomUUID())).contentType(MediaType.APPLICATION_JSON).content(dados(1, "Ausente")))
+            .andExpect(status().isNotFound());
+        mvc.perform(como(CIDADAO, "CIDADAO", put(url)).contentType(MediaType.APPLICATION_JSON)
+                .content(dados(1, "Não gravar", MOEMA, "{\"especieId\":1,\"sexoId\":999}")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$['animal.sexoId']").exists());
+        mvc.perform(get(url)).andExpect(jsonPath("$.titulo").value("Preservada")).andExpect(jsonPath("$.lat").value(CENTRO_SP[0]));
+        mvc.perform(como(ONG, "ONG", mudarStatus(id, "EM_ANDAMENTO"))).andExpect(status().isOk());
+        mvc.perform(como(CIDADAO, "CIDADAO", put(url)).contentType(MediaType.APPLICATION_JSON).content(dados(1, "Tarde")))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("Esta ocorrência não pode mais ser editada."));
+        mvc.perform(como(ONG, "ONG", put(url)).contentType(MediaType.APPLICATION_JSON).content(dados(1, "Responsável")))
+            .andExpect(status().isForbidden());
+        mvc.perform(como(ONG, "ONG", mudarStatus(id, "RESOLVIDA"))).andExpect(status().isOk());
+        mvc.perform(como(CIDADAO, "CIDADAO", put(url)).contentType(MediaType.APPLICATION_JSON).content(dados(1, "Resolvida")))
+            .andExpect(status().isConflict());
+    }
+
+    @Test void enderecoUsaUfEMunicipioCanonicos() throws Exception {
+        mvc.perform(como(CIDADAO, "CIDADAO", post(API)).contentType(MediaType.APPLICATION_JSON)
+                .content(dados(1, "NFC").replace("São Paulo", "  sa\u0303o paulo  ")))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.cidade").value("São Paulo"));
+        mvc.perform(como(CIDADAO, "CIDADAO", post(API)).contentType(MediaType.APPLICATION_JSON)
+                .content(dados(1, "UF").replace("\"sp\"", "\"ZZ\"")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.estado").value("Informe uma UF válida."));
+        mvc.perform(como(CIDADAO, "CIDADAO", post(API)).contentType(MediaType.APPLICATION_JSON)
+                .content(dados(1, "Par").replace("\"sp\"", "\"RJ\"")))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.cidade").value("Selecione um município válido para a UF."));
+    }
+
+    @Test void rejeitaContratoGeograficoIncompletoNaoFinitoOuForaDosLimites() throws Exception {
+        for (String[] par : new String[][]{{"raioKm", "10"}, {"lat", "0"}, {"lon", "0"}}) {
+            mvc.perform(get(API).param(par[0], par[1])).andExpect(status().isBadRequest());
+        }
+        for (String valor : new String[]{"NaN", "Infinity", "-Infinity", "1e309"}) {
+            mvc.perform(get(API).param("lat", valor).param("lon", "0")).andExpect(status().isBadRequest());
+            mvc.perform(get(API).param("lat", "0").param("lon", valor)).andExpect(status().isBadRequest());
+            mvc.perform(get(API).param("lat", "0").param("lon", "0").param("raioKm", valor)).andExpect(status().isBadRequest());
+        }
+        for (String raio : new String[]{"0", "-1", "500.0001"}) {
+            mvc.perform(get(API).param("lat", "0").param("lon", "0").param("raioKm", raio)).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get(API).param("lat", "90.01").param("lon", "0")).andExpect(status().isBadRequest());
+        mvc.perform(get(API).param("lat", "0").param("lon", "180.01")).andExpect(status().isBadRequest());
+        mvc.perform(get(API).param("lat", "90").param("lon", "180").param("raioKm", "500")).andExpect(status().isOk());
+        for (double[] ponto : new double[][]{{90.001, 0}, {0, 180.001}, {Double.NaN, 0}, {0, Double.POSITIVE_INFINITY}}) {
+            mvc.perform(como(CIDADAO, "CIDADAO", post(API)).contentType(MediaType.APPLICATION_JSON)
+                    .content(dados(1, "Inválida", ponto, "{\"especieId\":1}"))).andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test void preFiltroConservadorIncluiPontosCardeaisAntimeridianoEPolos() throws Exception {
+        double dentro = Math.toDegrees(9.996423905 / 6371.0);
+        double fora = Math.toDegrees(10.01 / 6371.0);
+        for (double[] ponto : new double[][]{{dentro, 0}, {-dentro, 0}, {0, dentro}, {0, -dentro}}) criar("Dentro", ponto);
+        for (double[] ponto : new double[][]{{fora, 0}, {-fora, 0}, {0, fora}, {0, -fora}}) criar("Fora", ponto);
+        mvc.perform(get(API).param("lat", "0").param("lon", "0")).andExpect(jsonPath("$", hasSize(4)));
+        String atravessa = criar("Antimeridiano", new double[]{0, -179.99});
+        mvc.perform(get(API).param("lat", "0").param("lon", "179.99").param("raioKm", "5"))
+            .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].id").value(atravessa));
+        String poloNorte = criar("Norte", new double[]{89.99, -130});
+        String poloSul = criar("Sul", new double[]{-89.99, 160});
+        mvc.perform(get(API).param("lat", "89.99").param("lon", "50").param("raioKm", "5"))
+            .andExpect(jsonPath("$[0].id").value(poloNorte));
+        mvc.perform(get(API).param("lat", "-89.99").param("lon", "-20").param("raioKm", "5"))
+            .andExpect(jsonPath("$[0].id").value(poloSul));
+        mvc.perform(como(ONG, "ONG", mudarStatus(atravessa, "EM_ANDAMENTO"))).andExpect(status().isOk());
+        mvc.perform(get(API).param("lat", "0").param("lon", "179.99").param("status", "ABERTA"))
+            .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test void prontidaoExigeTodasAsListasSemExporDetalhes() throws Exception {
+        mvc.perform(get("/internal/ready")).andExpect(status().isOk()).andExpect(content().json("{\"status\":\"UP\"}"));
+        var nomes = jdbc.queryForList("select id,nome from sexo_animal");
+        jdbc.update("delete from sexo_animal");
+        try {
+            mvc.perform(get("/internal/ready")).andExpect(status().isServiceUnavailable())
+                .andExpect(content().json("{\"status\":\"DOWN\"}"));
+        } finally {
+            for (var nome : nomes) jdbc.update("insert into sexo_animal(id,nome) values (?,?)", nome.get("ID"), nome.get("NOME"));
+        }
     }
 }

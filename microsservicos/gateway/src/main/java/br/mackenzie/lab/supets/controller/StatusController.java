@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Verificar se o deploy subiu. */
+/** Liveness do processo; a prontidão dos serviços é verificada em /api/ready. */
 @RestController
 @RequestMapping("/api")
 public class StatusController {

@@ -1,91 +1,31 @@
+# Implantação Docker atual
+
+Um host Docker executa o gateway, a interface web e os serviços de negócio. `community` reúne cadastro, autenticação e campanhas; `ocorrencias` mantém ocorrências e animais. Cada serviço de negócio possui seu próprio PostgreSQL.
+
 ```plantuml
 @startuml
-
-
-node "Browser" as browser {
-    [SPA]
+node "Navegador" as browser
+node "Host Docker\nlocal ou público" as host {
+    node "web / Caddy" as web
+    node "gateway" as gateway
+    node "community\ncidadão, ONG, auth, campanha" as community
+    node "ocorrencias" as ocorrencias
+    database "community-db\nPostgreSQL 16" as community_db
+    database "ocorrencias-db\nPostgreSQL 16" as ocorrencias_db
+    node "Jenkins opcional\nadmin em loopback" as jenkins
+    storage "Volumes persistentes\nbancos, controle, certificados, assets" as volumes
 }
-
-node "ServidorAWS" as aws {
-    node "campanha:EC2" as campanha {
-        node "campanha(docker)" {
-            [campanha.jar]
-        }
-    }
-    
-    node "campanha_db:EC2" as campanha_db {
-        node "campanha_db (docker)" {
-            database Campanha
-        } 
-    }
-    
-    node "broker-cidadao:EC2" as broker_cidadao {
-        node "broker-cidadao (docker)" {
-            [Cidadao RabbitMQ]
-        }
-    }
-    
-    
-    campanha -- campanha_db : TCP/IP
-    campanha -- broker_ong : AMQP
-    campanha -- broker_cidadao : AMQP
-    
-    
-    
-    node "ocorrencia:EC2" as ocorrencia {
-        node "ocorrencia(docker)" {
-            [ocorrencia.jar]
-        }
-    }
-    
-    node "ocorrencia_db:EC2" as ocorrencia_db {
-        node "ocorrencia_db (docker)" {
-            database Ocorrencia
-        }
-    }
-    
-    node "broker-ong:EC2" as broker_ong {
-        node "broker-ong (docker)" {
-            [Ong RabbitMQ]
-        }
-    }
-    
-    ocorrencia -- ocorrencia_db : TCP/IP
-    ocorrencia -- broker_cidadao : AMQP
-    ocorrencia -- broker_ong : AMQP
-    
-    node "ong_db:EC2" as ong_db {
-        node "ong_db(docker)" {
-            database Ong
-        }
-    }
-    
-    node "ong:EC2" as ong {
-        node "ong(docker)" {
-            [ong.jar]
-        }
-    }
-    
-    ong -- ong_db : TCP/IP
-    
-
-    node "cidadao:EC2" as cidadao {
-        node "cidadao(docker)" {
-            [cidadao.jar]
-        }
-    }
-    
-    node "cidadao_db:EC2" as cidadao_db {
-        node "cidadao_db(docker)" {
-            database Cidadao
-        }
-    }
-    
-    cidadao -- cidadao_db : TCP/IP
-    
-    browser -- aws : TCP/IP
-
-}
-
+browser --> web : HTTP loopback local\nHTTPS IPv4 público
+web --> gateway : HTTP / API
+gateway --> community : rede interna
+gateway --> ocorrencias : rede interna
+community --> community_db : rede privada do banco
+ocorrencias --> ocorrencias_db : rede privada do banco
+jenkins ..> host : Docker socket\nsomente código confiável
+community_db --> volumes
+ocorrencias_db --> volumes
+web --> volumes
 @enduml
 ```
+
+Somente Caddy publica a aplicação. Jenkins é acessado por loopback/túnel SSH; backends e bancos não publicam portas. As redes, imagens e volumes executáveis estão em [`deploy/docker-compose.yml`](../deploy/docker-compose.yml), com complementos cloud e CI no mesmo diretório.

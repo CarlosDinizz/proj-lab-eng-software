@@ -54,3 +54,10 @@ test("avisa que a sessão é inválida só quando um 401 responde a uma chamada 
     await criarApi({ token: "abc", aoSessaoInvalida, fetchImpl: fetchFalso(403).fetchImpl })("/ocorrencia/api/v1");
     assert.equal(avisos, 1);
 });
+
+test("caminhos que o navegador pode interpretar como externos não levam o token", async () => {
+    const { chamadas, fetchImpl } = fetchFalso();
+    const api = criarApi({ token: "segredo", fetchImpl });
+    for (const caminho of ["/\\outro.example/api", "/\n/outro.example/api", "/\t/outro.example/api"]) await api(caminho);
+    assert.ok(chamadas.every(({ opcoes }) => !opcoes.headers.has("Authorization")));
+});

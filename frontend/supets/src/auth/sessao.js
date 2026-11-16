@@ -10,7 +10,8 @@ function lerPayload(token) {
 export function tempoRestante(token, agora = Date.now()) {
     try {
         const { exp } = lerPayload(token);
-        return typeof exp === "number" ? exp * 1000 - agora : -1;
+        const restante = exp * 1000 - agora;
+        return typeof exp === "number" && Number.isFinite(exp) && Number.isFinite(restante) ? restante : -1;
     } catch {
         return -1;
     }
@@ -38,4 +39,18 @@ export function salvarSessao(sessao, storage = sessionStorage) {
 
 export function apagarSessao(storage = sessionStorage) {
     try { storage.removeItem(CHAVE); } catch { /* nada a apagar */ }
+}
+
+/** Apenas rotas internas; nunca transforma um destino externo em navegação autenticada. */
+export function destinoInterno(valor) {
+    if (typeof valor !== "string" || !valor.startsWith("/") || valor.startsWith("//") || /[\\\u0000-\u0020\u007f]/.test(valor)) return "/";
+    try {
+        const url = new URL(valor, "https://supets.invalid");
+        if (/[\\\u0000-\u001f\u007f]/.test(decodeURIComponent(valor))) return "/";
+        if (url.origin !== "https://supets.invalid" || /^\/login(?:\/|$)/i.test(url.pathname)) return "/";
+        // Rejeita também separadores/caracteres de controle codificados.
+        const decodificado = decodeURIComponent(url.pathname);
+        if (/[\\\u0000-\u0020\u007f]/.test(decodificado) || decodificado.startsWith("//") || /^\/login(?:\/|$)/i.test(decodificado)) return "/";
+        return `${url.pathname}${url.search}${url.hash}`;
+    } catch { return "/"; }
 }

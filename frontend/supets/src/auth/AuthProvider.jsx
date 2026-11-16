@@ -18,7 +18,13 @@ export function AuthProvider({ children }) {
     // Desloga sozinho quando o token vencer
     useEffect(() => {
         if (!usuario) return;
-        const timer = setTimeout(sair, tempoRestante(usuario.token));
+        let timer;
+        function agendar() {
+            const restante = tempoRestante(usuario.token);
+            if (restante <= 0) { sair(); return; }
+            timer = setTimeout(agendar, Math.min(restante, 2_147_483_647));
+        }
+        agendar();
         return () => clearTimeout(timer);
     }, [usuario, sair]);
 

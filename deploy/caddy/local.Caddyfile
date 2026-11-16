@@ -1,0 +1,3 @@
+(supets_site_options) {
+    encode zstd gzip
+}

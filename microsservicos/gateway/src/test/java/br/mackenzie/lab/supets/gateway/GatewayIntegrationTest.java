@@ -47,8 +47,9 @@ class GatewayIntegrationTest {
 
     @Test
     void forwardsCommunityRequestsWithoutRewritingPath() {
-        assertForwarded("/community/cidadao/api/v1/7?filter=active", "community|GET|/community/cidadao/api/v1/7?filter=active|");
-        assertForwarded("/community/ong/api/v1/8", "community|GET|/community/ong/api/v1/8|");
+        String id = UUID.randomUUID().toString();
+        assertForwarded("/community/cidadao/api/v1/" + id + "?filter=active", "community|GET|/community/cidadao/api/v1/" + id + "?filter=active|");
+        assertForwarded("/community/ong/api/v1/" + id, "community|GET|/community/ong/api/v1/" + id + "|");
         assertForwarded("/community/cidadao/api/v1", "community|GET|/community/cidadao/api/v1|");
         assertForwarded("/community/v3/api-docs", "community|GET|/community/v3/api-docs|");
         assertForwarded("/community", "community|GET|/community|");

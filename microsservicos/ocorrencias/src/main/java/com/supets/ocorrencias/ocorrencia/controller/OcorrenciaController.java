@@ -21,7 +21,7 @@ public class OcorrenciaController {
     public ResponseEntity<OcorrenciaRespostaDto> criar(
             @RequestHeader(value = UsuarioAutenticado.CABECALHO_ID, required = false) String usuarioId,
             @RequestHeader(value = UsuarioAutenticado.CABECALHO_PERFIL, required = false) String perfil,
-            @Valid @RequestBody CriarOcorrenciaDto dados) {
+            @Valid @RequestBody DadosOcorrenciaDto dados) {
         UsuarioAutenticado autor = UsuarioAutenticado.de(usuarioId, perfil);
         return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(autor, dados));
     }
@@ -58,6 +58,15 @@ public class OcorrenciaController {
 
     @GetMapping("/{id}")
     public OcorrenciaRespostaDto buscar(@PathVariable UUID id) { return service.buscar(id); }
+
+    @PutMapping("/{id}")
+    public OcorrenciaRespostaDto atualizar(
+            @PathVariable UUID id,
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_ID, required = false) String usuarioId,
+            @RequestHeader(value = UsuarioAutenticado.CABECALHO_PERFIL, required = false) String perfil,
+            @Valid @RequestBody DadosOcorrenciaDto dados) {
+        return service.atualizar(id, UsuarioAutenticado.de(usuarioId, perfil), dados);
+    }
 
     @PatchMapping("/{id}/status")
     public OcorrenciaRespostaDto atualizarStatus(

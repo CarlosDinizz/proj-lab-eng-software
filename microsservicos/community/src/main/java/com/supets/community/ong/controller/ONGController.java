@@ -2,6 +2,7 @@ package com.supets.community.ong.controller;
 
 import com.supets.community.ong.dto.OngDto;
 import com.supets.community.ong.service.ONGService;
+import com.supets.community.shared.dto.PerfilRespostaDto;
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -22,7 +23,7 @@ public class ONGController {
     }
 
     @GetMapping("/api/v1/{id}")
-    public ResponseEntity<String> getOng(@PathVariable Integer id) {
+    public ResponseEntity<PerfilRespostaDto> getOng(@PathVariable UUID id) {
         return ResponseEntity.ok(service.getOng(id));
     }
 }

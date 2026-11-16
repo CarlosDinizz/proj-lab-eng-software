@@ -21,9 +21,13 @@ public final class TokensDeTeste {
     }
 
     public static String gerar(String segredo, String id, String perfil, Instant expiraEm) {
+        return gerarComEmissor(segredo, id, perfil, expiraEm, "supets-community");
+    }
+
+    public static String gerarComEmissor(String segredo, String id, String perfil, Instant expiraEm, String emissor) {
         SecretKey chave = new SecretKeySpec(segredo.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         JwtClaimsSet claims = JwtClaimsSet.builder()
-            .issuer("supets-community")
+            .issuer(emissor)
             .subject(id)
             .claim("perfil", perfil)
             .issuedAt(expiraEm.minusSeconds(7200))

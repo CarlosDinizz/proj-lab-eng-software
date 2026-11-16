@@ -1,0 +1,55 @@
+import /etc/caddy/common.Caddyfile
+import /etc/caddy/{$CADDY_SITE_MODE:local}.Caddyfile
+
+{$SITE_ADDRESS:http://:8080} {
+    import supets_site_options
+    import supets_headers
+    import supets_errors
+    root * /srv
+
+    route {
+        @private path /community/internal /community/internal/* /internal /internal/* /history /history/*
+        handle @private {
+            respond 404
+        }
+
+        import supets_webhook
+        handle /github-webhook* {
+            respond 404
+        }
+
+        @api path /community /community/* /ocorrencia /ocorrencia/* /api /api/*
+        handle @api {
+            request_body {
+                max_size 64KiB
+            }
+            reverse_proxy gateway:8081 {
+                header_up -X-SuPets-Client-IP
+                header_up X-SuPets-Client-IP {remote_host}
+                transport http {
+                    dial_timeout 2s
+                    response_header_timeout 15s
+                }
+            }
+        }
+
+        handle /assets/* {
+            header Cache-Control "public, max-age=31536000, immutable"
+            try_files {path} /history{path} =404
+            file_server
+        }
+
+        @static path_regexp static \.(?:js|mjs|css|map|json|svg|png|jpe?g|gif|webp|ico|woff2?|ttf|eot)$
+        handle @static {
+            header Cache-Control no-cache
+            try_files {path} /history{path} =404
+            file_server
+        }
+
+        handle {
+            header Cache-Control no-store
+            try_files {path} /index.html
+            file_server
+        }
+    }
+}

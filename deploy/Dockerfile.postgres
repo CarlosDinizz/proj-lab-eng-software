@@ -1,0 +1,7 @@
+# syntax=docker/dockerfile:1
+FROM postgres:16-alpine3.23@sha256:9afe26709faad4c173fea5380b215bd6eb9691b05aa1be5b86cec8e0285da914
+COPY --chmod=0755 deploy/postgres/10-app-init.sh /docker-entrypoint-initdb.d/10-app-init.sh
+COPY --chmod=0755 deploy/postgres/20-test-init.sh /docker-entrypoint-initdb.d/20-test-init.sh
+RUN for script in /docker-entrypoint-initdb.d/10-app-init.sh /docker-entrypoint-initdb.d/20-test-init.sh; do \
+        tr -d '\r' < "$script" > /tmp/init.sh && cat /tmp/init.sh > "$script"; \
+    done && rm /tmp/init.sh

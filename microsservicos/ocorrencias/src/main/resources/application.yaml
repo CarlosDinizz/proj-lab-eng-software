@@ -1,11 +1,25 @@
 server:
+    address: ${SERVER_ADDRESS:127.0.0.1}
     port: 8082
+    shutdown: graceful
 
 spring:
     application:
-        name: ocorerncias
-
+        name: ocorrencias
+    lifecycle:
+        timeout-per-shutdown-phase: 30s
     datasource:
-        url: jdbc:postgresql://${PG_HOST:localhost}:5432/ocorrencias
-        username: ${PG_USER:root}
-        password: ${PG_PASSWORD:root}
+        url: ${SPRING_DATASOURCE_URL}
+        username: ${SPRING_DATASOURCE_USERNAME}
+        password: ${SPRING_DATASOURCE_PASSWORD}
+        hikari:
+            maximum-pool-size: 5
+            minimum-idle: 1
+            connection-timeout: 2000
+            validation-timeout: 1000
+    jpa:
+        hibernate:
+            ddl-auto: validate
+    sql:
+        init:
+            mode: never

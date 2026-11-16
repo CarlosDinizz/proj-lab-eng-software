@@ -1,0 +1,72 @@
+name: ${COMPOSE_PROJECT_NAME:?Defina um projeto de teste exclusivo}
+
+x-labels: &labels
+    com.supets.managed: "true"
+    com.supets.project: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
+    com.supets.test: "true"
+
+x-test-postgres: &test-postgres
+    image: ${POSTGRES_IMAGE:?Defina a imagem PostgreSQL com inicialização de teste}
+    platform: ${SUPETS_PLATFORM:?Defina SUPETS_PLATFORM}
+    labels: *labels
+    restart: "no"
+    read_only: true
+    tmpfs:
+        - /var/lib/postgresql/data:rw,nosuid,size=384m
+        - /var/run/postgresql:rw,noexec,nosuid,size=16m
+        - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    stop_grace_period: 35s
+    logging:
+        driver: json-file
+        options:
+            max-size: "10m"
+            max-file: "3"
+    networks: [test]
+    healthcheck:
+        test:
+            - CMD-SHELL
+            - >-
+              PGPASSWORD="$$APP_PASSWORD" PGCONNECT_TIMEOUT=2
+              PGOPTIONS='-c statement_timeout=1000'
+              psql --no-psqlrc -h 127.0.0.1 -U "$$APP_USER" -d "$$APP_DB"
+              -v ON_ERROR_STOP=1 -tAc
+              "SELECT label FROM supets_test_control.sentinel WHERE label = 'isolated-test-only'"
+              | grep -qx isolated-test-only
+        interval: 2s
+        timeout: 4s
+        retries: 30
+        start_period: 10s
+
+services:
+    community-test-db:
+        <<: *test-postgres
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:?Defina uma senha exclusiva para testes}
+            POSTGRES_DB: community_test
+            POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+            APP_USER: community_test
+            APP_PASSWORD: ${TEST_DB_PASSWORD:?Defina uma senha exclusiva para testes}
+            APP_DB: community_test
+            TEST_DATABASE: "true"
+
+    ocorrencias-test-db:
+        <<: *test-postgres
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:?Defina uma senha exclusiva para testes}
+            POSTGRES_DB: ocorrencias_test
+            POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust"
+            APP_USER: ocorrencias_test
+            APP_PASSWORD: ${TEST_DB_PASSWORD:?Defina uma senha exclusiva para testes}
+            APP_DB: ocorrencias_test
+            TEST_DATABASE: "true"
+
+networks:
+    test:
+        internal: true
+        labels: *labels

@@ -1,0 +1,61 @@
+services:
+    jenkins:
+        image: ${JENKINS_IMAGE:?Execute ci-up pelo launcher}
+        platform: ${JENKINS_PLATFORM:?Defina a plataforma nativa do engine}
+        restart: unless-stopped
+        user: "1000:1000"
+        group_add:
+            - "${DOCKER_SOCKET_GID:?Defina o GID real do socket}"
+        labels:
+            com.supets.managed: "true"
+            com.supets.project: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
+        cap_drop: [ALL]
+        security_opt: [no-new-privileges:true]
+        mem_limit: 1536m
+        stop_grace_period: 35s
+        environment:
+            DOCKER_HOST: unix:///var/run/docker.sock
+            SUPETS_PROJECT: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
+            SUPETS_PLATFORM: ${SUPETS_PLATFORM:?Defina SUPETS_PLATFORM}
+        ports:
+            - "127.0.0.1:18080:8080"
+        volumes:
+            - jenkins-home:/var/jenkins_home
+            - control-state:/state
+            - ci-approval:/etc/supets-ci
+            - type: bind
+              source: ${SUPETS_SOCKET_PATH:?Defina o socket selecionado pelo launcher}
+              target: /var/run/docker.sock
+        networks:
+            - jenkins
+        healthcheck:
+            test: [CMD, node, --input-type=module, -e, "const r=await fetch('http://127.0.0.1:8080/login',{signal:AbortSignal.timeout(3000)}); if(r.status!==200 || !r.headers.has('x-jenkins')) process.exit(1)"]
+            interval: 5s
+            timeout: 4s
+            retries: 36
+            start_period: 15s
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
+
+networks:
+    jenkins:
+        name: ${COMPOSE_PROJECT_NAME:?Defina COMPOSE_PROJECT_NAME}_jenkins
+        labels:
+            com.supets.managed: "true"
+            com.supets.project: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
+
+volumes:
+    jenkins-home:
+        labels:
+            com.supets.managed: "true"
+            com.supets.project: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
+    ci-approval:
+        labels:
+            com.supets.managed: "true"
+            com.supets.project: ${SUPETS_PROJECT:?Defina SUPETS_PROJECT}
+    control-state:
+        external: true
+        name: ${SUPETS_STATE_VOLUME:?Defina o volume de controle existente}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Box, Button, Card, Flex, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toaster } from "@/components/ui/toaster";
@@ -9,64 +9,75 @@ import { API_CAMPANHAS, podeEditar, podeParticipar, situacao } from "./campanhas
 
 export function DetalheCampanha() {
     const { id } = useParams();
+    return <ConteudoCampanha key={id} id={id} />;
+}
+
+function ConteudoCampanha({ id }) {
     const api = useApi();
     const navigate = useNavigate();
     const { usuario } = useAuth();
     const [resultado, setResultado] = useState(null);
     const [enviando, setEnviando] = useState(false);
-    const [participou, setParticipou] = useState(false);
+    const pendente = useRef(false);
+    const [tentativa, setTentativa] = useState(0);
+    const ativa = useRef(true);
+    useEffect(() => { ativa.current = true; return () => { ativa.current = false; }; }, []);
 
     useEffect(() => {
         const controller = new AbortController();
+        setResultado(null);
         api(`${API_CAMPANHAS}/${id}`, { signal: controller.signal })
             .then(async (resposta) => {
-                if (resposta.status === 404) return setResultado({ id, naoEncontrada: true });
+                if (resposta.status === 404) { if (!controller.signal.aborted) setResultado({ id, naoEncontrada: true }); return; }
                 if (!resposta.ok) throw new Error();
-                setResultado({ id, campanha: await resposta.json() });
+                const campanha = await resposta.json();
+                if (!controller.signal.aborted) setResultado({ id, campanha });
             })
             .catch((error) => {
-                if (error.name !== "AbortError") setResultado({ id, erro: true });
+                if (!controller.signal.aborted) setResultado({ id, erro: true });
             });
         return () => controller.abort();
-    }, [api, id]);
+    }, [api, id, tentativa]);
 
     async function participar() {
-        if (enviando) return;
+        if (pendente.current) return;
+        pendente.current = true;
         setEnviando(true);
         try {
             const resposta = await api(`${API_CAMPANHAS}/${id}/participacoes`, { method: "POST" });
             if (resposta.ok) {
-                setParticipou(true);
+                const campanha = await resposta.json();
+                if (!ativa.current) return;
+                setResultado({ id, campanha });
+                toaster.create({ title: "Participação registrada com sucesso!", type: "success" });
                 return;
             }
             if (resposta.status === 401) return;
             if (resposta.status === 409) {
-                setResultado((anterior) => ({ ...anterior, campanha: { ...anterior.campanha, participando: true } }));
-                toaster.create({ title: "Você já participa desta campanha.", type: "info" });
+                const corpo = await resposta.json().catch(() => ({}));
+                if (!ativa.current) return;
+                toaster.create({ title: corpo.message ?? "Não foi possível participar.", type: "info" });
+                // Nunca deduz participação a partir de 409: consulta a fonte de verdade.
+                setResultado(null);
+                try {
+                    const atual = await api(`${API_CAMPANHAS}/${id}`);
+                    if (atual.status === 404) { if (ativa.current) setResultado({ id, naoEncontrada: true }); return; }
+                    if (!atual.ok) throw new Error();
+                    const campanha = await atual.json();
+                    if (ativa.current) setResultado({ id, campanha });
+                } catch { if (ativa.current) setResultado({ id, erro: true }); }
                 return;
             }
             const corpo = await resposta.json().catch(() => ({}));
             throw new Error(corpo.message ?? "Tente novamente.");
         } catch (error) {
-            toaster.create({ title: "Não foi possível registrar a participação", description: error.message, type: "error" });
+            if (ativa.current) toaster.create({ title: "Não foi possível registrar a participação", description: error.message, type: "error" });
         } finally {
-            setEnviando(false);
+            pendente.current = false;
+            if (ativa.current) setEnviando(false);
         }
     }
 
-    if (participou) {
-        return (
-            <Box display="flex" justifyContent="center" py="10" px="4">
-                <Card.Root maxWidth="lg" width="full">
-                    <Card.Header><Card.Title>Ver campanha</Card.Title></Card.Header>
-                    <Card.Body><Text color="green.600" fontWeight="medium">Participação registrada com sucesso!</Text></Card.Body>
-                    <Card.Footer colorPalette="orange" justifyContent="flex-end">
-                        <Button onClick={() => navigate("/")}>Continuar</Button>
-                    </Card.Footer>
-                </Card.Root>
-            </Box>
-        );
-    }
 
     if (resultado?.id !== id) {
         return (
@@ -80,6 +91,7 @@ export function DetalheCampanha() {
         return (
             <Stack align="center" py="10">
                 <Text>{resultado.naoEncontrada ? "Campanha não encontrada." : "Não foi possível carregar a campanha."}</Text>
+                {resultado.erro && <Button onClick={() => setTentativa((n) => n + 1)}>Tentar novamente: campanha</Button>}
                 <Button variant="outline" onClick={() => navigate("/campanhas")}>Ver campanhas</Button>
             </Stack>
         );
@@ -124,7 +136,7 @@ export function DetalheCampanha() {
                         <Button onClick={participar} disabled={enviando}>{enviando ? "Enviando..." : "Participar"}</Button>
                     )}
                     {podeEditar(c, usuario) && (
-                        <Button onClick={() => navigate(`/campanhas/${c.id}/editar`)}>Editar</Button>
+                        <Button disabled={enviando} onClick={() => navigate(`/campanhas/${c.id}/editar`)}>Editar</Button>
                     )}
                 </Card.Footer>
             </Card.Root>

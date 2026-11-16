@@ -9,7 +9,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
@@ -20,7 +19,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class LoginIntegrationTest {
+class LoginIntegrationTest extends com.supets.community.IsolatedPostgresTest {
     @Value("${local.server.port}") int port;
     private final JdbcTemplate jdbc;
     private final HttpClient client = HttpClient.newHttpClient();
@@ -32,13 +31,13 @@ class LoginIntegrationTest {
     private final String sufixo = UUID.randomUUID() + "@example.com";
     private final String emailPessoa = "pessoa-" + sufixo;
     private final String emailOng = "ong-" + sufixo;
-    private final String cpf = String.format("%011d", ThreadLocalRandom.current().nextLong(100_000_000_000L));
-    private final String cnpj = String.format("%014d", ThreadLocalRandom.current().nextLong(100_000_000_000_000L));
+    private final String cpf = com.supets.community.DocumentosDeTeste.cpf();
+    private final String cnpj = com.supets.community.DocumentosDeTeste.cnpj();
 
     @AfterEach
     void limpar() {
-        jdbc.update("DELETE FROM cidadao WHERE email LIKE ?", "%" + sufixo);
-        jdbc.update("DELETE FROM ong WHERE email LIKE ?", "%" + sufixo);
+        jdbc.update("DELETE FROM cidadao WHERE lower(btrim(email)) LIKE ?", "%" + sufixo);
+        jdbc.update("DELETE FROM ong WHERE lower(btrim(email)) LIKE ?", "%" + sufixo);
     }
 
     @Test
@@ -77,6 +76,30 @@ class LoginIntegrationTest {
         cadastrar("cidadao", "cpf", cpf, emailPessoa);
 
         assertThat(login("  " + emailPessoa.toUpperCase() + " ", "senha123").statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void identidadeAmbiguaNuncaAutenticaNemRemoveContas() throws Exception {
+        cadastrar("cidadao", "cpf", cpf, emailPessoa);
+        cadastrar("ong", "cnpj", cnpj, emailOng);
+        jdbc.update("UPDATE ong SET email = ? WHERE email = ?", "  " + emailPessoa.toUpperCase() + "  ", emailOng);
+        var ambiguo = login(emailPessoa, "senha123");
+        var inexistente = login("ninguem-" + sufixo, "senha123");
+        assertThat(ambiguo.statusCode()).isEqualTo(401);
+        assertThat(ambiguo.body()).isEqualTo(inexistente.body()).doesNotContain("token", "CIDADAO", "ONG");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ong WHERE lower(btrim(email)) = ?", Integer.class, emailPessoa)).isEqualTo(1);
+        jdbc.update("UPDATE ong SET email = ? WHERE lower(btrim(email)) = ?", emailOng, emailPessoa);
+    }
+
+    @Test
+    void colisoesLegadasNoMesmoPerfilTambemSaoAmbiguas() throws Exception {
+        cadastrar("cidadao", "cpf", cpf, emailPessoa);
+        cadastrar("cidadao", "cpf", com.supets.community.DocumentosDeTeste.cpf(), emailOng);
+        jdbc.update("UPDATE cidadao SET email = ? WHERE email = ?", "  " + emailPessoa.toUpperCase() + "  ", emailOng);
+        var resposta = login(emailPessoa, "senha123");
+        assertThat(resposta.statusCode()).isEqualTo(401);
+        assertThat(resposta.body()).doesNotContain("token", "CIDADAO");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM cidadao WHERE lower(btrim(email)) = ?", Integer.class, emailPessoa)).isEqualTo(2);
     }
 
     @Test

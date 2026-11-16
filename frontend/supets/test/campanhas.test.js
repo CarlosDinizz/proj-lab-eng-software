@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
     LISTAS, VALORES_INICIAIS, errosDoBack, filtrarCampanhas, montarCorpo, podeEditar, podeParticipar, situacao, validar,
-    valoresDe,
+    valoresDe, hojeCampanha,
 } from "../src/components/campanha/campanhas.js";
 
 const HOJE = "2026-09-15";
@@ -113,4 +113,17 @@ test("só a ONG que criou edita", () => {
     assert.equal(podeEditar(campanha, { id: "ong-2", perfil: "ONG" }), false);
     assert.equal(podeEditar(campanha, { id: "ong-1", perfil: "CIDADAO" }), false);
     assert.equal(podeEditar(null, { id: "ong-1", perfil: "ONG" }), false);
+});
+
+test("calendário da campanha usa Brasília, inclusive na virada UTC", () => {
+    assert.equal(hojeCampanha(new Date("2026-11-17T01:00:00Z")), "2026-11-16");
+    assert.equal(hojeCampanha(new Date("2026-11-17T03:00:00Z")), "2026-11-17");
+    assert.equal(hojeCampanha(new Date("2027-01-01T02:59:59Z")), "2026-12-31");
+    const c = { dataInicio: "2026-11-16", dataFim: "2026-11-16" };
+    assert.equal(podeParticipar(c, { perfil: "CIDADAO" }, hojeCampanha(new Date("2026-11-17T01:00Z"))), true);
+    assert.equal(podeParticipar(c, { perfil: "CIDADAO" }, hojeCampanha(new Date("2026-11-17T03:00Z"))), false);
+});
+
+test("UF inválida não passa na validação da campanha", () => {
+    assert.ok(validar({ ...preenchido, estado: "ZZ" }, HOJE).estado);
 });

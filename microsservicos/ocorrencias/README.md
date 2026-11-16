@@ -1,92 +1,17 @@
-# Serviço Ocorrencias
+# Serviço Ocorrências
 
-# Sumário
+Monolito modular para ocorrências, animais, localização e transições de atendimento.
+Mantém PostgreSQL próprio, Flyway e contrato de identidade recebido exclusivamente do gateway.
 
-- [Arquitetura](#arquitetura)
-- [Migrations](#migrations)
-- [Documentação API](#documentação-api)
-- [Requisitos](#requisitos)
-- [Como executar?](#como-executar)
+## Executar e testar
 
-## Arquitetura
-O serviço ocorrencias segue a arquitetura de monolito modular.
+Na **raiz do repositório**, use `sh ./supets.sh up` e `sh ./supets.sh verify`.
+No Windows, use o launcher PowerShell do [README principal](../../README.md).
+O contêiner atende internamente em `ocorrencias:8082`; a porta e o banco não são publicados.
 
-Isto quer dizer que este serviço é dividido por módulos:
-- Ocorrencia
+Os testes existentes usam H2 com propriedades fixadas. Testes separados de migrations e concorrência usam PostgreSQL descartável com sentinel, sem acesso aos bancos da aplicação.
+O guard de migrations aceita instalação vazia ou histórico V1–V4 completo conhecido (com V5 opcional). Esquemas antigos incompletos, divergentes ou desconhecidos são bloqueados **sem apagar dados**.
+Não reescreva V1–V4, não use `repair`/baseline para contornar o bloqueio e não invente autores/animais/localizações de registros antigos.
 
-```
-├───src
-│   ├───main
-│   │   ├───java
-│   │   │   └───com
-│   │   │       └───supets
-│   │   │           └───ocorrencias
-│   │   │               └──ocorrencia
-│   │   │                  ├───controller
-│   │   │                  ├───model
-│   │   │                  ├───repository
-│   │   │                  └───service
-│   │   │                      └───impl
-│   │   └───resources
-│   │       ├───db
-│   │       │   └───migration
-│   │       ├───static
-│   │       └───templates
-│   └───test
-│       └───java
-│           └───com
-│               └───supets
-│                   └───ocorrencias
-└───target
-├───classes
-│   └───com
-│       └───supets
-│           └───ocorrencias
-│               ├───ocorrencia
-│               │   ├───controller
-│               │   ├───model
-│               │   ├───repository
-│               │   └───service
-│               │       └───impl
-```
-
-## Migrations
-Para criação, alteração e outros métodos para as entidades no banco, é necessário a criação de arquivos migrations.
-Para mais informações, clique [aqui](https://www.baeldung.com/database-migrations-with-flyway)
-
-## Documentação API
-A documentação dos endpoints dessa API podem ser acessadas através do Swagger.
-
-Abra seu navegador e digite:
-<http://URL_SERVICO:8082/swagger-ui/index.html>
-
-Substitua `URL_SERVICO` por localhost se não estiver executando o serviço pelo container.
-
-## Requisitos
-
-- Java  21
-- Maven
-- PostgreSQL 16.3
-
-## Como executar?
-Primeiramente é necessário que o banco ``ocorrencias_db`` esteja em execução.
-
-Veja executando:
-```bash
-docker ps
-```
-
-Caso não esteja, execute o docker-compose.yml:
-```bash
-docker compose up -d
-```
-
-Após isso, execute a aplicação Spring Boot:
-```bash
-mvn clean install
-```
-
-```bash
-mvn spring-boot:run
-```
-
+API de criação, edição completa e status: [validação/contratos](../../docs/validacao.md).
+Deploy/backup: [operação](../../deploy/README.md).

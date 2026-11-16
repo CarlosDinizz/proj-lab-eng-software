@@ -2,7 +2,7 @@ package com.supets.community.campanha.service;
 
 import com.supets.community.campanha.dto.CampanhaDto;
 import com.supets.community.campanha.dto.CampanhaRespostaDto;
-import com.supets.community.campanha.dto.UsuarioAutenticado;
+import com.supets.community.shared.dto.UsuarioAutenticado;
 import com.supets.community.campanha.model.TipoCampanha;
 import java.util.List;
 import java.util.UUID;

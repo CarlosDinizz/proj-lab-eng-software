@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 public interface OcorrenciaService {
-    OcorrenciaRespostaDto criar(UsuarioAutenticado autor, CriarOcorrenciaDto dados);
+    OcorrenciaRespostaDto criar(UsuarioAutenticado autor, DadosOcorrenciaDto dados);
+    OcorrenciaRespostaDto atualizar(UUID id, UsuarioAutenticado usuario, DadosOcorrenciaDto dados);
     OcorrenciaRespostaDto buscar(UUID id);
     /** Com lat e lon, devolve só as ocorrências até raioKm do ponto, da mais próxima para a mais longe. */
     List<OcorrenciaRespostaDto> listar(StatusOcorrencia status, Double lat, Double lon, Double raioKm);

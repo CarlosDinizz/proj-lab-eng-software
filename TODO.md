@@ -1,56 +1,46 @@
-# Tecnologias e pendências
+# Estado e pendências
 
-Versões exatas: `pom.xml` de cada serviço e `frontend/supets/package.json`.
+Versões e dependências: `pom.xml` de cada serviço, `frontend/supets/package.json` e lockfile. Comandos de execução: [README](README.md). Contratos e cenários: [testes](docs/validacao.md).
 
-## Tecnologias
+## Funcionalidades
 
-### Backend (`microsservicos/`)
+- [x] Cadastro e login de cidadão/ONG com JWT, documentos válidos e endereço canônico.
+- [x] Reserva transacional de e-mail entre perfis e rejeição de identidades ambíguas.
+- [x] Consulta de perfis por UUID sem dados privados.
+- [x] Autorização no gateway e nas operações de negócio; cabeçalhos de identidade não são aceitos do cliente.
+- [x] API de campanhas: criação, consulta, edição da ONG proprietária e participação de cidadãos.
+- [x] API de ocorrências: criação por cidadão, consulta geográfica, edição completa do autor enquanto aberta, atendimento e resolução.
+- [x] Preservação de IDs/metadados e serialização dos conflitos de edição/atendimento.
+- [x] Catálogo de municípios empacotado, CPF/CNPJ numérico/alfanumérico e categorias de ocorrência atualizadas.
+- [x] Interface de cadastro, sessão e navegação validada em desktop, viewport móvel e teclado no Chrome.
+- [x] Interface de ocorrências, edição, mapas, localização e recuperação de erros validada no Chrome.
+- [x] Interface de campanhas, filtros, calendário e reconciliação de conflitos validada no Chrome.
 
-- Java 21, Maven (wrapper `mvnw`).
-- Spring Boot 4 em `community` e `ocorrencias`; Spring Boot 3.5 no `gateway`.
-- Spring Cloud Gateway (Server WebMVC) no `gateway`, porta 8081.
-- Spring Web MVC, Spring Data JPA, Bean Validation.
-- Spring Modulith: cada serviço é um monolito modular.
-- Flyway para migrations.
-- PostgreSQL 16, via Docker Compose (um banco por serviço).
-- H2 nos testes de `ocorrencias`.
-- springdoc-openapi (Swagger UI).
-- Lombok.
-- Spring Security Crypto (hash de senha) em `community`.
-- Spring Security OAuth2 JOSE (JWT): o `community` emite o token no login e o `gateway` valida.
-- JUnit 5 e Spring Boot Test.
+## Build e execução
 
-### Frontend (`frontend/supets/`)
+- [x] Lockfile npm; builds com `npm ci`, Node e imagens-base fixados.
+- [x] Imagens Docker de todos os serviços e frontend; stack local iniciada com readiness.
+- [x] Chave JWT compartilhada gerada; sem fallback público de assinatura.
+- [x] Configuração privada fora do repositório; exemplos sem credenciais utilizáveis.
+- [x] Caddy como entrada da aplicação; backends/bancos sem portas publicadas.
+- [x] Testes Java, frontend, PostgreSQL e APIs integradas em ambientes descartáveis.
+- [x] Proteção de migrations contra histórico legado inseguro, sem alteração de V1–V4.
+- [x] Release/importação sem rebuild, rollback, retenção de assets e recuperação de bloqueios validados.
+- [x] Backup/restauração isolada e rotação de credenciais validados com preservação dos dados.
+- [x] Setup limpo em caminho com espaços/acentos e persistência após parada/inicialização.
+- [x] Setup nativo com PowerShell e Docker Desktop no Windows; cadastro, login e persistência após parada/inicialização.
+- [ ] Validar execução e persistência nativas no macOS e arm64.
 
-- React 19, Vite.
-- Chakra UI 3, Emotion, next-themes, react-icons.
-- React Router 7.
-- Tailwind CSS 3, PostCSS, Autoprefixer.
-- ESLint; testes com `node --test`.
+## Jenkins
 
-### Infra
+- [x] Imagem/plugins, configuração administrativa privada e job candidato real executados.
+- [x] Continuidade de estado entre operador e pipeline, hashes imutáveis e relatórios JUnit/TAP comprovados.
+- [x] Falhas de testes/implantação, recuperação e implantação bem-sucedida validadas no pipeline.
 
-- Jenkins (`Jenkinsfile`): build, teste, empacotamento e deploy.
-- AWS EC2, serviço systemd (`deploy/`).
-- Modelagem em PlantUML (`modelagem/`).
+## Implantação pública
 
-## Pendências
-
-### Funcionalidades
-
-- [X] Serviço de campanhas: registrar, visualizar, atualizar e participar (casos de uso 4 a 7).
-- [x] Login de cidadão e ONG: `POST /community/auth/api/v1/login` devolve um JWT e o frontend guarda a sessão.
-- [x] Autenticação e autorização nas rotas: o `gateway` valida o JWT e repassa `X-Usuario-Id` e `X-Usuario-Perfil` aos serviços; rotas sem login ficam em `RotasPublicas`.
-- [ ] Atualizar ocorrência além do status (caso de uso 3).
-- [X] Telas de criar ocorrência, minhas ocorrências e campanhas, conforme `modelagem/wireframes/`.
-- [ ] Mensageria com RabbitMQ entre serviços, conforme `modelagem/implantacao.md`.
-
-### Infra e qualidade
-
-- [x] Pipeline do Jenkins para `gateway`, `community`, `ocorrencias` e frontend (`Jenkinsfile`; passo a passo em `deploy/README.md`).
-- [ ] Imagens Docker dos serviços, conforme o diagrama de implantação.
-- [ ] Executar o deploy na AWS (EC2 + Jenkins + webhook): scripts prontos em `deploy/`, falta aplicar no servidor.
-- [x] Retirar `microsservicos/ocorrencias/.env` do Git; manter só o `.env.example`.
-- [ ] Definir o mesmo `JWT_SECRET` no `gateway` e no `community` no servidor; o valor padrão do código é só para desenvolvimento.
-- [ ] Expor só o `gateway` na rede: `community` e `ocorrencias` confiam nos cabeçalhos `X-Usuario-*` que ele envia.
-- [ ] Testes do frontend além da configuração do Vite.
+- [x] HTTPS confiável no IPv4 público, redirecionamento e bloqueio externo das portas internas validados.
+- [ ] Executar fluxos reais, persistência, falhas/recuperação e restore no servidor de destino.
+- [ ] Medir recursos durante build/testes e uso concorrente antes de definir capacidade.
+- [ ] Verificar persistência de certificados e observar renovação natural quando ocorrer.
+- [ ] Investigar/revogar credenciais históricas nos ambientes em que tenham sido utilizadas.

@@ -16,6 +16,8 @@ import { NovaCampanha } from './components/campanha/NovaCampanha'
 import { EditarCampanha } from './components/campanha/EditarCampanha'
 import { ListaCampanhas } from './components/campanha/ListaCampanhas'
 import { DetalheCampanha } from './components/campanha/DetalheCampanha'
+import { EditarOcorrencia } from './components/ocorrencia/EditarOcorrencia'
+import { Sobre } from './pages/Sobre'
 
 function App() {
   return (
@@ -35,6 +37,7 @@ function App() {
                                 <RotaProtegida perfil="CIDADAO"><NovaOcorrencia /></RotaProtegida>
                             } />
                             <Route path="/ocorrencias/:id" element={<RotaProtegida><DetalheOcorrencia /></RotaProtegida>} />
+                            <Route path="/ocorrencias/:id/editar" element={<RotaProtegida perfil="CIDADAO"><EditarOcorrencia /></RotaProtegida>} />
                             {/* Campanhas exigem login; criar e editar só ONG; participar só cidadão */}
                             <Route path="/campanhas" element={<RotaProtegida><ListaCampanhas /></RotaProtegida>} />
                             <Route path="/campanhas/nova" element={<RotaProtegida perfil="ONG"><NovaCampanha /></RotaProtegida>} />
@@ -47,6 +50,7 @@ function App() {
                             <Route path="/campanhas/:id" element={<RotaProtegida><DetalheCampanha /></RotaProtegida>} />
                             <Route path="/campanhas/:id/editar" element={<RotaProtegida perfil="ONG"><EditarCampanha /></RotaProtegida>} />
                             <Route path="/" element={<Home />}/>
+                            <Route path="/sobre" element={<Sobre />} />
                             <Route path="*" element={<Home />}/>
                         </Routes>
                     </Box>

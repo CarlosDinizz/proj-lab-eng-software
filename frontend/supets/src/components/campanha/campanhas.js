@@ -1,4 +1,14 @@
-import { formatarCep, hoje } from "../ocorrencia/ocorrencias.js";
+import { formatarCep } from "../ocorrencia/ocorrencias.js";
+import { ufValida } from "../../shared/endereco.js";
+
+const calendario = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit",
+});
+
+export function hojeCampanha(agora = new Date()) {
+    const partes = Object.fromEntries(calendario.formatToParts(agora).map(({ type, value }) => [type, value]));
+    return `${partes.year}-${partes.month}-${partes.day}`;
+}
 
 export const API_CAMPANHAS = "/community/campanha/api/v1";
 
@@ -19,7 +29,7 @@ const OBRIGATORIOS = {
     estado: "Selecione o estado.",
 };
 
-export function validar(valores, dataDeHoje = hoje(), inicioOriginal = null) {
+export function validar(valores, dataDeHoje = hojeCampanha(), inicioOriginal = null) {
     const erros = {};
     for (const [campo, mensagem] of Object.entries(OBRIGATORIOS)) {
         if (!String(valores[campo] ?? "").trim()) erros[campo] = mensagem;
@@ -32,6 +42,7 @@ export function validar(valores, dataDeHoje = hoje(), inicioOriginal = null) {
         erros.dataFim = "A data de fim deve ser igual ou depois da data de início.";
     }
     if (valores.cep && valores.cep.replace(/\D/g, "").length !== 8) erros.cep = "O CEP deve ter 8 dígitos.";
+    if (!ufValida(valores.estado)) erros.estado = "Informe uma UF válida.";
     return erros;
 }
 
@@ -91,13 +102,13 @@ export function filtrarCampanhas(campanhas, { busca = "", estado = "", cidade = 
         && (!nomeCidade || normalizar(c.cidade).includes(nomeCidade)));
 }
 
-export function situacao(campanha, dataDeHoje = hoje()) {
+export function situacao(campanha, dataDeHoje = hojeCampanha()) {
     if (campanha.dataFim < dataDeHoje) return { texto: "Encerrada", cor: "gray" };
     if (campanha.dataInicio > dataDeHoje) return { texto: "Em breve", cor: "blue" };
     return { texto: "Acontecendo", cor: "green" };
 }
 
-export function podeParticipar(campanha, usuario, dataDeHoje = hoje()) {
+export function podeParticipar(campanha, usuario, dataDeHoje = hojeCampanha()) {
     if (!campanha || usuario?.perfil !== "CIDADAO") return false;
     return !campanha.participando && campanha.dataFim >= dataDeHoje;
 }

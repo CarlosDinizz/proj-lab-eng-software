@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+FROM docker:29.8.0-cli@sha256:eccaacfeed644c7de222ff047483568cb988dde95476fbaaf10ea2d04921bb66 AS docker-cli
+FROM node:22.22.1-bookworm-slim@sha256:4f77a690f2f8946ab16fe1e791a3ac0667ae1c3575c3e4d0d4589e9ed5bfaf3d AS node
+# This multi-platform index contains Jenkins 2.580.2, Java 21, amd64 and arm64.
+FROM jenkins/jenkins:lts-jdk21@sha256:74401de6a6f92e1afe1b02d1c8e3d0c33f263bfb5275dd8813f9150355f2367b
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates coreutils curl git tar \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=node /usr/local/ /usr/local/
+COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker-cli /usr/local/libexec/docker/cli-plugins/ /usr/local/libexec/docker/cli-plugins/
+COPY --chown=jenkins:jenkins deploy/jenkins/plugins.txt /usr/share/jenkins/plugins.txt
+COPY --chown=jenkins:jenkins deploy/jenkins/plugins.sha256 /usr/share/jenkins/plugins.sha256
+COPY deploy/jenkins/published-main.json /etc/supets-ci/published-main.json
+RUN chmod 0755 /etc/supets-ci && chmod 0644 /etc/supets-ci/published-main.json
+USER jenkins
+RUN jenkins-plugin-cli --jenkins-version 2.580.2 --latest=false --plugin-file /usr/share/jenkins/plugins.txt \
+    && cd /usr/share/jenkins/ref/plugins \
+    && sha256sum --check /usr/share/jenkins/plugins.sha256 \
+    && test "$(find . -maxdepth 1 -name '*.jpi' | wc -l)" -eq "$(grep -c '  ' /usr/share/jenkins/plugins.sha256)"
+COPY --chown=jenkins:jenkins deploy/jenkins/init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
+COPY --chown=jenkins:jenkins deploy/jenkins/logging.properties /usr/share/jenkins/logging.properties
+# Trusted bootstrap utilities only; application source comes from the reviewed archive.
+COPY --chmod=0644 deploy/jenkins/*.mjs /opt/supets/deploy/jenkins/
+COPY --chmod=0644 deploy/supets.mjs /opt/supets/deploy/supets.mjs
+COPY --chmod=0644 deploy/verification/releases.mjs /opt/supets/deploy/verification/releases.mjs
+ENV DOCKER_HOST=unix:///var/run/docker.sock \
+    JENKINS_SLAVE_AGENT_PORT=-1 \
+    JAVA_OPTS="-Xms256m -Xmx768m -Djava.util.logging.config.file=/usr/share/jenkins/logging.properties"
+WORKDIR /var/jenkins_home

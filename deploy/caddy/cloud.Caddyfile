@@ -1,0 +1,10 @@
+(supets_site_options) {
+    encode zstd gzip
+    tls {
+        issuer acme {
+            dir {$ACME_CA:https://acme-v02.api.letsencrypt.org/directory}
+            email {$ACME_EMAIL}
+            profile shortlived
+        }
+    }
+}

@@ -8,7 +8,8 @@ import com.supets.community.cidadao.service.CidadaoService;
 import com.supets.community.ong.service.ONGService;
 import com.supets.community.shared.dto.CredencialDto;
 import com.supets.community.shared.exceptions.CredenciaisInvalidasException;
-import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -30,15 +31,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginRespostaDto login(LoginDto request) {
-        Optional<CredencialDto> encontrada = cidadaoService.buscarCredencial(request.email())
-            .or(() -> ongService.buscarCredencial(request.email()));
-
-        String hash = encontrada.map(CredencialDto::senhaHash).orElse(hashFalso);
-        boolean senhaConfere = hash != null && encoder.matches(request.senha(), hash);
-
-        CredencialDto credencial = encontrada
-            .filter(c -> senhaConfere)
-            .orElseThrow(CredenciaisInvalidasException::new);
+        List<CredencialDto> candidatas = new ArrayList<>(cidadaoService.buscarCredenciais(request.email()));
+        candidatas.addAll(ongService.buscarCredenciais(request.email()));
+        CredencialDto credencial = candidatas.size() == 1 ? candidatas.getFirst() : null;
+        String hash = credencial != null && credencial.senhaHash() != null ? credencial.senhaHash() : hashFalso;
+        boolean senhaConfere = encoder.matches(request.senha(), hash);
+        if (credencial == null || !senhaConfere) throw new CredenciaisInvalidasException();
 
         String token = tokenService.gerarToken(credencial);
         return new LoginRespostaDto(token, credencial.id(), credencial.nome(), credencial.perfil());

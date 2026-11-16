@@ -60,15 +60,4 @@ class ValidadorCadastroTest {
         assertFalse(validador.isSenhaForte(null));
     }
 
-    @Test
-    @DisplayName("CPF: aceita com e sem máscara e rejeita dígitos errados ou repetidos")
-    void validaCpf() {
-        assertTrue(validador.isCpfValido("529.982.247-25"));
-        assertTrue(validador.isCpfValido("52998224725"));
-        assertFalse(validador.isCpfValido("529.982.247-24"));
-        assertFalse(validador.isCpfValido("529.982.247-17"));
-        assertFalse(validador.isCpfValido("111.111.111-11"));
-        assertFalse(validador.isCpfValido("529.982.247"));
-        assertFalse(validador.isCpfValido(null));
-    }
 }

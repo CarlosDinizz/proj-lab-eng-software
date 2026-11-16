@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
     VALORES_INICIAIS, acoesPermitidas, caminhoDaLista, distanciaKm, errosDoBack, formatarCep,
-    formatarData, formatarDistancia, hoje, montarCorpo, validar,
+    formatarData, formatarDistancia, hoje, montarCorpo, validar, pontoValido, podeEditar, valoresDe,
 } from "../src/components/ocorrencia/ocorrencias.js";
 
 const preenchido = {
@@ -68,8 +68,8 @@ test("traduz os erros do back para os campos da tela", () => {
         { especieId: "Espécie não encontrada.", nomeAnimal: "x", lat: "y", cep: "z", message: "m" });
 });
 
-const usuario = { id: "eu" };
-const ocorrencia = (status, cidadaoId = "outro", responsavelId = null) => ({ status, cidadaoId, responsavelId });
+const usuario = { id: "eu", perfil: "CIDADAO" };
+const ocorrencia = (status, cidadaoId = "outro", responsavelId = null) => ({ status, cidadaoId, responsavelId, responsavelPerfil: "CIDADAO" });
 
 test("qualquer pessoa logada pode assumir uma ocorrência aberta", () => {
     assert.deepEqual(acoesPermitidas(ocorrencia("ABERTA"), usuario), { assumir: true, resolver: false });
@@ -102,4 +102,54 @@ test("monta o caminho da listagem conforme o filtro", () => {
     assert.equal(caminhoDaLista({ status: "ABERTA", local: { lat: -23.5, lon: -46.6 }, raioKm: 10 }),
         "/ocorrencia/api/v1?status=ABERTA&lat=-23.5&lon=-46.6&raioKm=10");
     assert.equal(caminhoDaLista({ local: { lat: -23.5, lon: -46.6 }, raioKm: null }), "/ocorrencia/api/v1");
+});
+
+test("autor e responsável são identidades com UUID e perfil", () => {
+    const ong = { id: "eu", perfil: "ONG" };
+    assert.equal(acoesPermitidas(ocorrencia("ABERTA", "eu"), ong).resolver, false);
+    assert.equal(acoesPermitidas(ocorrencia("EM_ANDAMENTO", "outro", "eu"), ong).resolver, false);
+    assert.equal(acoesPermitidas({ ...ocorrencia("EM_ANDAMENTO", "outro", "eu"), responsavelPerfil: "ONG" }, ong).resolver, true);
+    assert.equal(podeEditar(ocorrencia("ABERTA", "eu"), usuario), true);
+    for (const status of ["EM_ANDAMENTO", "RESOLVIDA"]) assert.equal(podeEditar(ocorrencia(status, "eu"), usuario), false);
+    assert.equal(podeEditar(ocorrencia("ABERTA", "outro", "eu"), usuario), false);
+    assert.equal(podeEditar(ocorrencia("ABERTA", "eu"), ong), false);
+    assert.equal(podeEditar(null, usuario), false);
+});
+
+test("coordenadas exigem números finitos, pares completos e limites válidos; zero é um ponto", () => {
+    assert.equal(pontoValido({ lat: 0, lon: 0 }), true);
+    assert.equal(pontoValido({ lat: -90, lon: 180 }), true);
+    for (const local of [{ lat: null, lon: 0 }, { lat: "", lon: 0 }, { lat: "1", lon: 0 },
+        { lat: 0 }, { lat: NaN, lon: 0 }, { lat: 0, lon: Infinity }, { lat: 90.00001, lon: 0 },
+        { lat: 0, lon: -180.00001 }]) {
+        assert.equal(pontoValido(local), false);
+        assert.ok(validar({ ...preenchido, ...local, lon: local.lon }, "2026-11-10").lat);
+    }
+});
+
+test("edição hidrata todos os campos, mantém zero e permite limpar opcionais do animal", () => {
+    const salvo = {
+        ...preenchido, id: "persistido", tipoOcorrenciaId: 3, lat: 0, lon: 0, cep: "04094050",
+        animal: { id: "animal-persistido", nome: "Rex", especieId: 1, sexoId: 2, raca: "SRD", porteId: 3 },
+    };
+    const v = valoresDe(salvo);
+    assert.equal(v.lat, 0);
+    assert.equal(v.lon, 0);
+    assert.equal(v.tipoOcorrenciaId, "3");
+    assert.equal(v.cep, "04094-050");
+    assert.equal(v.nomeAnimal, "Rex");
+    assert.equal(v.especieId, "1");
+    assert.equal(v.sexoId, "2");
+    assert.equal(v.porteId, "3");
+    assert.equal(v.raca, "SRD");
+    const corpo = JSON.parse(JSON.stringify(montarCorpo({ ...v, nomeAnimal: "", sexoId: "", raca: " ", porteId: "" })));
+    assert.deepEqual(corpo.animal, { especieId: 1 });
+    assert.equal(corpo.id, undefined);
+    assert.equal(corpo.status, undefined);
+});
+
+test("Haversine é finito nos polos, antípodas e travessia do antimeridiano", () => {
+    assert.ok(Math.abs(distanciaKm({ lat: 0, lon: 0 }, { lat: 0, lon: 180 }) - Math.PI * 6371) < 1e-6);
+    assert.ok(distanciaKm({ lat: 0, lon: 179.99 }, { lat: 0, lon: -179.99 }) < 3);
+    assert.ok(Number.isFinite(distanciaKm({ lat: 90, lon: -180 }, { lat: -90, lon: 180 })));
 });

@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Box, Button, Card, Field, Input, Link, Stack, Text } from "@chakra-ui/react";
 import { Navigate, Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { toaster } from "@/components/ui/toaster";
 import { useAuth } from "@/auth/useAuth";
+import { destinoInterno } from "@/auth/sessao";
 
 export function Login() {
     const navigate = useNavigate();
     const location = useLocation();
     const { usuario, entrar } = useAuth();
     // Quem foi mandado para cá por uma tela protegida volta para ela depois de entrar
-    const destino = location.state?.de ?? "/";
+    const destino = destinoInterno(location.state?.de);
     const [valores, setValores] = useState({ email: "", senha: "" });
     const [enviando, setEnviando] = useState(false);
+    const pendente = useRef(false);
 
     // Quem já está logado não precisa ver a tela de login
     if (usuario) return <Navigate to={destino} replace />;
@@ -23,12 +25,13 @@ export function Login() {
 
     async function login(event) {
         event.preventDefault();
-        if (enviando) return;
+        if (pendente.current) return;
         if (!valores.email.trim() || !valores.senha) {
             toaster.create({ title: "Não foi possível entrar", description: "Preencha e-mail e senha.", type: "error" });
             return;
         }
 
+        pendente.current = true;
         setEnviando(true);
         try {
             const resposta = await fetch("/community/auth/api/v1/login", {
@@ -42,10 +45,11 @@ export function Login() {
             }
             entrar(corpo);
             toaster.create({ title: `Bem-vindo, ${corpo.nome}!`, type: "success" });
-            navigate(destino);
+            navigate(destino, { replace: true });
         } catch (error) {
             toaster.create({ title: "Não foi possível entrar", description: error.message, type: "error" });
         } finally {
+            pendente.current = false;
             setEnviando(false);
         }
     }

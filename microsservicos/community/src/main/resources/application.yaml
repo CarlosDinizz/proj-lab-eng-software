@@ -1,5 +1,7 @@
 server:
-    port: 8080
+    port: 8083
+    address: 127.0.0.1
+    shutdown: graceful
     servlet:
         context-path: /community
 
@@ -8,12 +10,18 @@ spring:
         name: community
 
     datasource:
-        url: jdbc:postgresql://${PG_HOST:localhost}:5431/community
-        username: ${PG_USER:root}
-        password: ${PG_PASSWORD:root}
+        url: ${SPRING_DATASOURCE_URL}
+        username: ${SPRING_DATASOURCE_USERNAME}
+        password: ${SPRING_DATASOURCE_PASSWORD}
+        hikari:
+            maximum-pool-size: 5
+            minimum-idle: 1
+            connection-timeout: 2000
+            validation-timeout: 1000
+    lifecycle:
+        timeout-per-shutdown-phase: 30s
 
 supets:
     jwt:
-        # Em produção, defina JWT_SECRET (mínimo 32 caracteres). O padrão abaixo é só para desenvolvimento.
-        segredo: ${JWT_SECRET:supets-dev-segredo-local-troque-em-producao}
+        segredo: ${JWT_SECRET}
         expiracao: ${JWT_EXPIRACAO:2h}

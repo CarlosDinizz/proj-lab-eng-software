@@ -25,6 +25,7 @@ import org.springframework.test.context.DynamicPropertySource;
 class AutenticacaoGatewayTest {
     private static final AtomicInteger CHAMADAS = new AtomicInteger();
     private static final HttpServer SERVICO = servico();
+    private static final String PERFIL_ID = "343b4c65-c8f3-4dc2-aafe-50bd6decb5ee";
 
     @Value("${local.server.port}") int port;
     @Value("${supets.jwt.segredo}") String segredo;
@@ -43,11 +44,12 @@ class AutenticacaoGatewayTest {
 
     @Test
     void rotasPublicasDispensamToken() throws Exception {
-        assertThat(enviar("GET", "/community/ong/api/v1/8").statusCode()).isEqualTo(202);
+        assertThat(enviar("GET", "/community/ong/api/v1/" + PERFIL_ID).statusCode()).isEqualTo(202);
         assertThat(enviar("POST", "/community/auth/api/v1/login").statusCode()).isEqualTo(202);
         assertThat(enviar("POST", "/community/cidadao/api/v1").statusCode()).isEqualTo(202);
         assertThat(enviar("POST", "/community/ong/api/v1").statusCode()).isEqualTo(202);
         assertThat(enviar("GET", "/api/status").statusCode()).isEqualTo(200);
+        assertThat(enviar("GET", "/api/ready").statusCode()).isEqualTo(503);
     }
 
     @Test
@@ -62,7 +64,7 @@ class AutenticacaoGatewayTest {
         assertThat(enviar("GET", "/ocorrencia/api/v1").statusCode()).isEqualTo(401);
         assertThat(enviar("GET", "/ocorrencia/api/v1/" + UUID.randomUUID()).statusCode()).isEqualTo(401);
         assertThat(enviar("GET", "/ocorrencia/api/v1/tipos").statusCode()).isEqualTo(401);
-        assertThat(enviar("GET", "/community/cidadao/api/v1/1").statusCode()).isEqualTo(401);
+        assertThat(enviar("GET", "/community/cidadao/api/v1/" + PERFIL_ID).statusCode()).isEqualTo(401);
         assertThat(enviar("GET", "/rota/inexistente").statusCode()).isEqualTo(401);
 
         assertThat(CHAMADAS.get()).isEqualTo(antes);
@@ -87,6 +89,7 @@ class AutenticacaoGatewayTest {
             "lixo",
             TokensDeTeste.gerar(segredo, id, "CIDADAO", Instant.now().minusSeconds(3600)),
             TokensDeTeste.valido("outra-chave-secreta-com-mais-de-32-bytes", id, "CIDADAO"),
+            TokensDeTeste.gerarComEmissor(segredo, id, "CIDADAO", Instant.now().plusSeconds(3600), "outro-emissor"),
             TokensDeTeste.valido(segredo, id, "ADMIN"),
             TokensDeTeste.valido(segredo, "nao-e-uuid", "CIDADAO"));
         int antes = CHAMADAS.get();
@@ -94,7 +97,7 @@ class AutenticacaoGatewayTest {
         for (String token : tokens) {
             assertThat(enviar("POST", "/ocorrencia/api/v1", "Authorization", "Bearer " + token).statusCode()).isEqualTo(401);
             // Token ruim é recusado mesmo em rota pública.
-            assertThat(enviar("GET", "/community/ong/api/v1/8", "Authorization", "Bearer " + token).statusCode()).isEqualTo(401);
+            assertThat(enviar("GET", "/community/ong/api/v1/" + PERFIL_ID, "Authorization", "Bearer " + token).statusCode()).isEqualTo(401);
         }
 
         assertThat(CHAMADAS.get()).isEqualTo(antes);
@@ -103,8 +106,8 @@ class AutenticacaoGatewayTest {
     @Test
     void clienteNaoConsegueForjarOsCabecalhosDeUsuario() throws Exception {
         String forjado = UUID.randomUUID().toString();
-        var publica = enviar("GET", "/community/ong/api/v1/8", "X-Usuario-Id", forjado, "X-Usuario-Perfil", "ONG");
-        assertThat(publica.body()).isEqualTo("GET|/community/ong/api/v1/8|-|-");
+        var publica = enviar("GET", "/community/ong/api/v1/" + PERFIL_ID, "X-Usuario-Id", forjado, "X-Usuario-Perfil", "ONG");
+        assertThat(publica.body()).isEqualTo("GET|/community/ong/api/v1/" + PERFIL_ID + "|-|-");
 
         String id = UUID.randomUUID().toString();
         var autenticada = enviar("POST", "/ocorrencia/api/v1",
@@ -120,6 +123,28 @@ class AutenticacaoGatewayTest {
         assertThat(enviar("GET", "/community/ong/api/v1/%2e%2e/%2e%2e/cidadao/api/v1/1").statusCode()).isEqualTo(400);
         assertThat(enviar("GET", "/community/ong/api/v1/8;x=1").statusCode()).isEqualTo(400);
 
+        assertThat(CHAMADAS.get()).isEqualTo(antes);
+    }
+
+    @Test
+    void prontidaoInternaNuncaEncaminhaMesmoComToken() throws Exception {
+        int antes = CHAMADAS.get();
+        assertThat(enviar("GET", "/community/internal/ready").statusCode()).isEqualTo(404);
+        assertThat(enviar("GET", "/community/internal/ready", "Authorization", bearer(PERFIL_ID, "CIDADAO")).statusCode()).isEqualTo(404);
+        assertThat(CHAMADAS.get()).isEqualTo(antes);
+    }
+
+    @Test
+    void limiteDeCadastroCompartilhaOsDoisPerfis() throws Exception {
+        for (int i = 0; i < 60; i++) {
+            String caminho = i % 2 == 0 ? "/community/cidadao/api/v1" : "/community/ong/api/v1";
+            assertThat(enviar("POST", caminho, "X-SuPets-Client-IP", "198.51.100.50").statusCode()).isEqualTo(202);
+        }
+        int antes = CHAMADAS.get();
+        var limitada = enviar("POST", "/community/ong/api/v1", "X-SuPets-Client-IP", "198.51.100.50");
+        assertThat(limitada.statusCode()).isEqualTo(429);
+        assertThat(limitada.headers().firstValue("Retry-After")).isPresent();
+        assertThat(limitada.body()).isEqualTo("{\"message\":\"Muitas tentativas. Aguarde um minuto e tente novamente.\"}");
         assertThat(CHAMADAS.get()).isEqualTo(antes);
     }
 

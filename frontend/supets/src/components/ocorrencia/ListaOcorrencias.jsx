@@ -8,6 +8,9 @@ import { CartaoOcorrencia } from "./CartaoOcorrencia";
 import { MapaOcorrencias } from "./Mapa";
 import { useLocalizacao } from "./useLocalizacao";
 import { CENTRO_PADRAO, STATUS, caminhoDaLista, distanciaKm } from "./ocorrencias";
+import { useRecurso } from "@/shared/useRecurso";
+import { SeletorDeLocal } from "./Mapa";
+import { FeedbackLocalizacao } from "./FeedbackLocalizacao";
 
 const RAIOS = [5, 10, 25, 50];
 
@@ -23,40 +26,25 @@ export function ListaOcorrencias({ minhas = false }) {
     const { pedir } = localizacao;
     const [status, setStatus] = useState("");
     const [raioKm, setRaioKm] = useState(10);
-    // Guarda junto o caminho buscado: se o filtro mudou e o caminho é outro, ainda está carregando
-    const [resultado, setResultado] = useState(null);
+    const [localManual, setLocalManual] = useState(null);
 
     // Ao abrir, pede a localização para mostrar o que está perto
     useEffect(() => {
         if (!minhas) pedir();
     }, [minhas, pedir]);
 
-    const esperandoLocal = !minhas && (localizacao.situacao === "inicial" || localizacao.situacao === "buscando");
-    const caminho = caminhoDaLista({ minhas, status, local: localizacao.local, raioKm });
-
-    useEffect(() => {
-        if (esperandoLocal) return;
-        const controller = new AbortController();
-        api(caminho, { signal: controller.signal })
-            .then((resposta) => {
-                if (!resposta.ok) throw new Error();
-                return resposta.json();
-            })
-            .then((ocorrencias) => setResultado({ caminho, ocorrencias }))
-            .catch((error) => {
-                if (error.name !== "AbortError") setResultado({ caminho, erro: true });
-            });
-        return () => controller.abort();
-    }, [api, caminho, esperandoLocal]);
-
-    const carregando = esperandoLocal || resultado?.caminho !== caminho;
-    // Em "Minhas", o filtro de status é feito aqui mesmo
-    const ocorrencias = (resultado?.ocorrencias ?? []).filter((o) => !minhas || !status || o.status === status);
-    const centro = localizacao.local ?? ocorrencias[0] ?? CENTRO_PADRAO;
+    const esperandoLocal = !minhas && !localManual && (localizacao.situacao === "inicial" || localizacao.situacao === "buscando");
+    const local = localManual ?? localizacao.local;
+    const caminho = caminhoDaLista({ minhas, status, local, raioKm });
+    const recurso = useRecurso(api, esperandoLocal ? null : caminho);
+    const carregando = recurso.status === "loading";
+    // Nunca apresenta marcadores de um filtro anterior enquanto o atual está pendente.
+    const ocorrencias = (recurso.dados ?? []).filter((o) => !minhas || !status || o.status === status);
+    const centro = local ?? ocorrencias[0] ?? CENTRO_PADRAO;
 
     function etiqueta(ocorrencia) {
         if (!minhas) return null;
-        return ocorrencia.cidadaoId === usuario.id ? "Registrada por você" : "Você está ajudando";
+        return usuario.perfil === "CIDADAO" && ocorrencia.cidadaoId === usuario.id ? "Registrada por você" : "Você está ajudando";
     }
 
     return (
@@ -84,7 +72,7 @@ export function ListaOcorrencias({ minhas = false }) {
                             <NativeSelect.Indicator />
                         </NativeSelect.Root>
                     </Field.Root>
-                    {!minhas && localizacao.local && (
+                    {!minhas && local && (
                         <Field.Root maxW="xs">
                             <Field.Label>Distância</Field.Label>
                             <NativeSelect.Root>
@@ -97,14 +85,14 @@ export function ListaOcorrencias({ minhas = false }) {
                         </Field.Root>
                     )}
                 </HStack>
-                {!minhas && (localizacao.situacao === "negada" || localizacao.situacao === "indisponivel") && (
-                    <Text fontSize="sm">
-                        Não conseguimos sua localização, então mostramos todas as ocorrências.{" "}
-                        <Button size="xs" variant="outline" onClick={() => pedir()}>Tentar de novo</Button>
-                    </Text>
-                )}
+                {!minhas && <Stack>
+                    <FeedbackLocalizacao situacao={localizacao.situacao} />
+                    <Button size="sm" variant="outline" onClick={() => pedir(() => setLocalManual(null))} disabled={localizacao.situacao === "buscando"}>Tentar novamente: minha localização</Button>
+                    {!local && <Text fontSize="sm">Sem um ponto selecionado, a lista é global. Defina latitude e longitude ou clique no mapa abaixo para filtrar.</Text>}
+                    <SeletorDeLocal ponto={local} centro={centro} onChange={setLocalManual} />
+                </Stack>}
 
-                <MapaOcorrencias ocorrencias={ocorrencias} centro={centro} voceEstaAqui={localizacao.local} />
+                <MapaOcorrencias ocorrencias={ocorrencias} centro={centro} voceEstaAqui={local} />
 
                 {carregando && (
                     <Flex role="status" align="center" gap="2">
@@ -112,12 +100,13 @@ export function ListaOcorrencias({ minhas = false }) {
                         <Text>Carregando ocorrências...</Text>
                     </Flex>
                 )}
-                {!carregando && resultado?.erro && <Text>Não foi possível carregar as ocorrências.</Text>}
-                {!carregando && !resultado?.erro && ocorrencias.length === 0 && <Text>Nenhuma ocorrência encontrada.</Text>}
+                {recurso.status === "error" && <Stack role="alert"><Text>Não foi possível carregar as ocorrências.</Text><Button onClick={recurso.recarregar}>Tentar novamente: ocorrências</Button></Stack>}
+                {recurso.status === "not-found" && <Text>Lista de ocorrências não encontrada.</Text>}
+                {recurso.status === "ready" && ocorrencias.length === 0 && <Text>Nenhuma ocorrência encontrada.</Text>}
                 <Flex gap="4" align="stretch" wrap="wrap">
                     {!carregando && ocorrencias.map((ocorrencia) => (
                         <CartaoOcorrencia key={ocorrencia.id} ocorrencia={ocorrencia} etiqueta={etiqueta(ocorrencia)}
-                            distanciaKm={localizacao.local ? distanciaKm(localizacao.local, ocorrencia) : null} />
+                            distanciaKm={local ? distanciaKm(local, ocorrencia) : null} />
                     ))}
                 </Flex>
             </Stack>

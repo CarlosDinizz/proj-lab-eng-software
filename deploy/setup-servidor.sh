@@ -1,104 +1,68 @@
-#!/usr/bin/env bash
-# Prepara a EC2 (Ubuntu 24.04, com Jenkins já instalado pelo User Data do laboratório).
-# Pode ser executado de novo sem problema. Uso: sudo ./deploy/setup-servidor.sh
-set -euo pipefail
+#!/bin/sh
+# Instala somente o Docker Engine em Ubuntu limpo; não instala a aplicação.
+# Outros sistemas: https://docs.docker.com/engine/install/
+set -eu
 
-if [[ $EUID -ne 0 ]]; then
-    echo "Execute com sudo." >&2
-    exit 1
+fail() { printf '%s\n' "$*" >&2; exit 1; }
+[ "$(uname -s)" = Linux ] || fail "Este instalador opcional é apenas para Linux. Use Docker Desktop e o launcher raiz neste sistema."
+DOCKER_BIN=${DOCKER_BIN:-docker}
+
+if command -v "$DOCKER_BIN" >/dev/null 2>&1; then
+    "$DOCKER_BIN" info --format 'Docker {{.ServerVersion}}; {{.OSType}}/{{.Architecture}}; CPUs={{.NCPU}}; memória={{.MemTotal}} bytes' ||
+        fail "Docker já existe, mas não está acessível. Inicie o engine ou corrija a permissão/contexto; nenhuma instalação foi alterada."
+    [ "$("$DOCKER_BIN" info --format '{{.OSType}}')" = linux ] ||
+        fail "Selecione um engine de contêineres Linux."
+    printf '%s\n' "Docker existente preservado. A aplicação é executada pelo launcher supets.sh."
+    exit 0
 fi
-if ! id jenkins >/dev/null 2>&1; then
-    echo "Usuário jenkins não encontrado; instale o Jenkins antes." >&2
-    exit 1
-fi
+[ "$DOCKER_BIN" = docker ] || fail "DOCKER_BIN não encontrado: $DOCKER_BIN. Corrija o caminho; nenhuma instalação foi alterada."
 
-DIR="$(cd "$(dirname "$0")" && pwd)"
-SERVICOS=(gateway community ocorrencias)
+[ ! -x /snap/bin/docker ] ||
+    fail "Docker Snap já existe. Use DOCKER_BIN=/snap/bin/docker; não será instalado outro daemon."
+[ "$(id -u)" -eq 0 ] || fail "Docker não encontrado. Para instalar em Ubuntu limpo: sudo sh deploy/setup-servidor.sh"
+[ -r /etc/os-release ] || fail "Sistema não identificado. Siga https://docs.docker.com/engine/install/"
+. /etc/os-release
+[ "${ID:-}" = ubuntu ] ||
+    fail "Instalação automática disponível apenas para Ubuntu. Use as instruções oficiais da distribuição detectada: ${ID:-desconhecida}."
+case "${VERSION_CODENAME:-}" in
+    jammy|noble|resolute|stonking) ;;
+    *) fail "Versão Ubuntu não suportada por este instalador: ${VERSION_ID:-desconhecida}." ;;
+esac
+architecture=$(dpkg --print-architecture)
+case "$architecture" in amd64|arm64) ;; *) fail "Arquitetura não suportada pelo projeto: $architecture." ;; esac
+[ -d /run/systemd/system ] || fail "systemd não está ativo; instale/inicie Docker conforme a documentação do ambiente."
 
+# Não remover pacotes, reutilizar dados desconhecidos ou sobrescrever configuração.
+for package in docker.io docker-compose docker-compose-v2 docker-doc docker-buildx podman-docker containerd runc docker-ce; do
+    status=$(dpkg-query -W -f '${db:Status-Status}' "$package" 2>/dev/null || true)
+    [ "$status" != installed ] ||
+        fail "Pacote existente $package exige revisão manual. Nenhum pacote foi removido."
+done
+for existing in /var/lib/docker /var/snap/docker /etc/docker /etc/apt/keyrings/docker.asc /etc/apt/sources.list.d/docker.sources /etc/apt/sources.list.d/docker.list; do
+    [ ! -e "$existing" ] || fail "Estado/configuração existente: $existing. Revise antes de instalar; nada foi sobrescrito."
+done
+
+# Repositório oficial: https://docs.docker.com/engine/install/ubuntu/
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y openjdk-21-jdk-headless nginx docker.io docker-compose-v2 curl ca-certificates openssl
-
-# Node 22 para buildar o front (o Vite 8 não roda no Node 18 do repositório padrão do Ubuntu).
-NODE_MAJOR="$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/' || true)"
-if [[ -z "${NODE_MAJOR:-}" || "$NODE_MAJOR" -lt 20 ]]; then
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-    apt-get install -y nodejs
-fi
-
-# Memória: Jenkins + 3 serviços Java + 2 Postgres + builds. Cria 2 GB de swap se não houver.
-if [[ "$(swapon --show --noheadings | wc -l)" -eq 0 ]]; then
-    fallocate -l 2G /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-fi
-
-# Diretórios do deploy.
-install -d -o jenkins -g jenkins /opt/supets /var/www/supets
-install -d -m 750 -o root -g jenkins /etc/supets
-
-# Segredos: gerados uma única vez, nunca vão para o Git.
-if [[ ! -f /etc/supets/supets.env ]]; then
-    umask 077
-    cat > /etc/supets/supets.env <<ENV
-PG_USER=supets
-PG_PASSWORD=$(openssl rand -hex 16)
-JWT_SECRET=$(openssl rand -hex 32)
-ENV
-    chown root:jenkins /etc/supets/supets.env
-    chmod 640 /etc/supets/supets.env
-    echo "Segredos gerados em /etc/supets/supets.env"
-fi
-
-# Bancos (Postgres em Docker, com restart automático).
+apt-get install -y ca-certificates curl
+install -m 0755 -d /etc/apt/keyrings
+curl --fail --show-error --silent --location --connect-timeout 10 --max-time 60 \
+    https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+cat > /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $VERSION_CODENAME
+Components: stable
+Architectures: $architecture
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 systemctl enable --now docker
-docker compose -p supets --env-file /etc/supets/supets.env -f "$DIR/docker-compose.yml" up -d
-
-# Banco separado só para os testes do community: eles gravam dados de verdade.
-set -a; . /etc/supets/supets.env; set +a
-for i in $(seq 1 30); do
-    docker exec community_db pg_isready -U "$PG_USER" -d community >/dev/null 2>&1 && break
-    sleep 2
-done
-docker exec community_db psql -U "$PG_USER" -d community -tAc \
-    "SELECT 1 FROM pg_database WHERE datname='community_test'" | grep -q 1 \
-    || docker exec community_db psql -U "$PG_USER" -d community -c "CREATE DATABASE community_test"
-
-# Serviços systemd (o antigo supets.service, só do gateway, é removido).
-if [[ -f /etc/systemd/system/supets.service ]]; then
-    systemctl disable --now supets || true
-    rm -f /etc/systemd/system/supets.service
-fi
-for s in "${SERVICOS[@]}"; do
-    install -m 644 "$DIR/supets-$s.service" "/etc/systemd/system/supets-$s.service"
-done
-systemctl daemon-reload
-for s in "${SERVICOS[@]}"; do systemctl enable "supets-$s"; done
-
-# Front: nginx serve /var/www/supets e encaminha a API para o gateway.
-rm -f /etc/nginx/sites-enabled/default
-install -m 644 "$DIR/nginx-supets.conf" /etc/nginx/sites-available/supets
-ln -sf /etc/nginx/sites-available/supets /etc/nginx/sites-enabled/supets
-nginx -t
-systemctl enable nginx
-systemctl reload nginx || systemctl restart nginx
-
-# O Jenkins só pode reiniciar os serviços do SuPets, nada além disso.
-SUDOERS="$(mktemp)"
-trap 'rm -f "$SUDOERS"' EXIT
-{
-    printf 'jenkins ALL=(root) NOPASSWD:'
-    sep=' '
-    for s in "${SERVICOS[@]}"; do
-        printf '%s/usr/bin/systemctl restart supets-%s' "$sep" "$s"
-        sep=', '
-    done
-    printf '\n'
-} > "$SUDOERS"
-visudo -cf "$SUDOERS"
-install -m 440 "$SUDOERS" /etc/sudoers.d/supets
-
-echo "Servidor pronto. Security Group: libere 22 (SSH), 80 (site) e 8080 (Jenkins). Não abra 8081, 8082, 8083, 5431 nem 5432."
-echo "Depois reinicie o Jenkins (sudo systemctl restart jenkins) para ele enxergar o Node e o grupo docker, se necessário."
+docker info --format 'Docker {{.ServerVersion}}; {{.OSType}}/{{.Architecture}}'
+printf '%s\n' \
+    "Docker instalado. Não foram instalados serviços da aplicação, Jenkins ou proxy, nem alterada a configuração de swap." \
+    "Execute o launcher raiz com acesso autorizado ao Docker. O grupo docker concede autoridade administrativa sobre o host." \
+    "No servidor público: 80/443 acessíveis; SSH restrito ao seu CIDR. Não publique portas internas."

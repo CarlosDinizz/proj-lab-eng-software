@@ -2,6 +2,7 @@ package com.supets.community.shared.exceptions.handler;
 
 import com.supets.community.shared.exceptions.CadastroDuplicadoException;
 import com.supets.community.shared.exceptions.CredenciaisInvalidasException;
+import com.supets.community.shared.exceptions.ApiException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,6 +20,11 @@ import java.util.Map;
 
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Map<String, String>> erroDeApi(ApiException exception) {
+        return ResponseEntity.status(exception.getStatus()).body(Map.of(exception.getCampo(), exception.getMessage()));
+    }
 
     @ExceptionHandler(CadastroDuplicadoException.class)
     public ResponseEntity<Map<String, String>> cadastroDuplicado(CadastroDuplicadoException exception) {
