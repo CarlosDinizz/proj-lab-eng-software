@@ -1,0 +1,35 @@
+# Bancos de produção (um por serviço). Subir com:
+#   docker compose --env-file /etc/supets/supets.env -f deploy/docker-compose.yml up -d
+# As portas ficam só em localhost: quem acessa o banco são os serviços da própria máquina.
+name: supets
+
+services:
+    community_db:
+        container_name: community_db
+        image: postgres:16-alpine3.23
+        restart: always
+        environment:
+            POSTGRES_USER: ${PG_USER:?defina PG_USER em /etc/supets/supets.env}
+            POSTGRES_PASSWORD: ${PG_PASSWORD:?defina PG_PASSWORD em /etc/supets/supets.env}
+            POSTGRES_DB: community
+        ports:
+            - "127.0.0.1:5431:5432"
+        volumes:
+            - community_data:/var/lib/postgresql/data
+
+    ocorrencias_db:
+        container_name: ocorrencias_db
+        image: postgres:16-alpine3.23
+        restart: always
+        environment:
+            POSTGRES_USER: ${PG_USER:?defina PG_USER em /etc/supets/supets.env}
+            POSTGRES_PASSWORD: ${PG_PASSWORD:?defina PG_PASSWORD em /etc/supets/supets.env}
+            POSTGRES_DB: ocorrencias
+        ports:
+            - "127.0.0.1:5432:5432"
+        volumes:
+            - ocorrencias_data:/var/lib/postgresql/data
+
+volumes:
+    community_data:
+    ocorrencias_data:
